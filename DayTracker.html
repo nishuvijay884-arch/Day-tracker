@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F3864">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Day Tracker">
+<title>Day Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--text:#1b2433;--muted:#6b7a90;--line:#e3e8f0;--brand:#2E75B6;--navy:#1F3864;--good:#2E9E5B;--bad:#C0504D;--warn:#E08A1E;--soft:#eef3fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1520;--card:#182131;--text:#e8edf5;--muted:#93a1b5;--line:#263246;--brand:#5aa2e0;--navy:#223455;--soft:#1f2b3f}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:560px;margin:0 auto;padding:14px 14px calc(84px + env(safe-area-inset-bottom))}
+h1{font-size:22px;margin:4px 0 0}h2{font-size:15px;margin:18px 0 8px}
+.muted{color:var(--muted)}.small{font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
+textarea,input,select{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+textarea{resize:vertical}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;color:var(--text);background:var(--soft)}
+button.primary{background:var(--brand);color:#fff;font-weight:600}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.6}
+.row{display:flex;gap:8px;margin-top:8px}.row>.primary{flex:1}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.quick button{padding:10px 4px;font-size:13px;border:1px solid var(--line);background:var(--card)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.kpi .l{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:24px;font-weight:700;color:var(--navy)}
+@media (prefers-color-scheme:dark){.kpi .v{color:#cfe1f7}}
+.kpi .s{font-size:11.5px;color:var(--muted)}
+.bar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--brand)}
+.bar.over>i{background:var(--bad)}
+.item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .t{flex:1;min-width:0;word-break:break-word}
+.item .x{background:none;color:var(--muted);padding:4px 8px}
+.badge{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--soft);color:var(--muted)}
+.badge.High{background:#fde8e7;color:#b3362f}.badge.Medium{background:#fff1dc;color:#a8630a}.badge.Low{background:#e3f3e9;color:#23743f}
+.late{color:var(--bad)}
+.chartbox{position:relative;height:220px}
+.chartbox.sm{height:200px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border-radius:0;padding:10px 0 8px;font-size:11px;color:var(--muted)}
+nav button b{display:block;font-size:19px;font-weight:400}
+nav button.on{color:var(--brand);font-weight:600}
+#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222;color:#fff;padding:9px 14px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+#toast.show{opacity:.95}
+.coach{white-space:pre-wrap}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <section id="v-home" class="view">
+    <h1>Day Tracker</h1><div id="dateLine" class="muted"></div>
+    <div class="card">
+      <textarea id="note" rows="3" placeholder="Tell me about your day, e.g. reached office 9:20, drank 3 glasses, lunch 180, need to call electrician"></textarea>
+      <div class="row"><button id="mic" title="Speak" hidden>🎤</button><button id="go" class="primary">Add</button></div>
+      <div id="mode" class="muted small" style="margin-top:6px"></div>
+      <div id="preview"></div>
+    </div>
+    <div class="quick">
+      <button data-q="w1">💧 +1 glass</button>
+      <button data-q="w2">💧 +2</button>
+      <button data-q="in">🏢 Arrived</button>
+      <button data-q="out">🚪 Leaving</button>
+    </div>
+    <div id="todayCards" class="grid2"></div>
+    <h2>Today's log</h2>
+    <div class="card" id="todayList"></div>
+  </section>
+
+  <section id="v-dash" class="view" hidden>
+    <h1>Dashboard</h1><div class="row" style="margin-top:6px"><select id="range" style="width:auto"><option value="7">Last 7 days</option><option value="14" selected>Last 14 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></div>
+    <div id="kpis" class="grid2" style="margin-top:10px"></div>
+    <div class="card"><b>Insights</b><div id="insights" class="small" style="margin-top:6px"></div>
+      <div class="row"><button id="coachBtn" class="primary">Ask AI coach</button></div>
+      <div id="coachOut" class="coach small" style="margin-top:8px"></div>
+    </div>
+    <div id="charts">
+      <div class="card"><b>Water vs goal</b><div class="chartbox"><canvas id="c-water"></canvas></div></div>
+      <div class="card"><b>Arrival &amp; leaving time</b><div class="chartbox"><canvas id="c-time"></canvas></div></div>
+      <div class="card"><b>Hours at office</b><div class="chartbox"><canvas id="c-hours"></canvas></div></div>
+      <div class="card"><b>Daily spending vs budget</b><div class="chartbox"><canvas id="c-spend"></canvas></div></div>
+      <div class="card"><b>Spend by category</b><div class="chartbox sm"><canvas id="c-cat"></canvas></div></div>
+      <div class="card"><b>Tasks</b><div class="chartbox sm"><canvas id="c-task"></canvas></div></div>
+    </div>
+  </section>
+
+  <section id="v-hist" class="view" hidden>
+    <h1>History</h1>
+    <div class="card">
+      <label style="margin-top:0">Pick a date</label>
+      <div class="row" style="margin-top:0"><button id="hPrev">◀</button><input id="hDate" type="date"><button id="hNext">▶</button></div>
+    </div>
+    <div id="hCards" class="grid2"></div>
+    <h2>Entries on this day</h2><div class="card" id="hList"></div>
+    <h2>Recent days (tap a row)</h2><div class="card" id="hTable" style="padding:4px 8px;overflow-x:auto"></div>
+  </section>
+
+  <section id="v-tasks" class="view" hidden>
+    <h1>Tasks</h1>
+    <div class="card">
+      <input id="tTitle" placeholder="New personal task">
+      <div class="grid2">
+        <div><label>Priority</label><select id="tPrio"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+        <div><label>Due date (optional)</label><input id="tDue" type="date"></div>
+      </div>
+      <div class="row"><button id="tAdd" class="primary">Add task</button></div>
+    </div>
+    <h2>Open</h2><div class="card" id="tOpen"></div>
+    <h2>Done</h2><div class="card" id="tDone"></div>
+  </section>
+
+  <section id="v-set" class="view" hidden>
+    <h1>Settings</h1>
+    <div class="card">
+      <b>AI (Claude API)</b>
+      <label>Your Anthropic API key</label>
+      <input id="sKey" type="password" placeholder="sk-ant-..." autocomplete="off">
+      <label>Model</label>
+      <select id="sModel"><option value="claude-haiku-5-5">Claude Haiku 5.5 (fast, cheapest)</option><option value="claude-sonnet-5-5">Claude Sonnet 5.5 (smarter)</option></select>
+      <p class="muted small">The key is saved only in this browser and sent only to api.anthropic.com. Anyone who can open this app on your phone can see it, so use a key with a low spending limit. With no key, the app still works using a simple offline parser.</p>
+    </div>
+    <div class="card">
+      <b>Your goals</b>
+      <div class="grid2">
+        <div><label>Water goal (glasses/day)</label><input id="sWater" type="number" min="1" step="1"></div>
+        <div><label>Office start time</label><input id="sStart" type="time"></div>
+        <div><label>Daily budget</label><input id="sBudget" type="number" min="0" step="50"></div>
+        <div><label>Currency symbol</label><input id="sCur" maxlength="3"></div>
+      </div>
+    </div>
+    <div class="card">
+      <b>Your data</b>
+      <p class="muted small">Everything is stored on this device. Export a backup now and then.</p>
+      <div class="row" style="flex-wrap:wrap">
+        <button id="bJson">Export backup</button><button id="bImport">Import backup</button><button id="bCsv">Export CSV</button>
+      </div>
+      <div class="row" style="flex-wrap:wrap">
+        <button id="bSample">Load sample data</button><button id="bUnsample">Remove sample data</button><button id="bErase" class="danger">Erase everything</button>
+      </div>
+      <input id="fileIn" type="file" accept=".json,application/json" hidden>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="home" class="on"><b>🏠</b>Home</button>
+  <button data-tab="dash"><b>📊</b>Dashboard</button>
+  <button data-tab="hist"><b>🗓️</b>History</button>
+  <button data-tab="tasks"><b>✅</b>Tasks</button>
+  <button data-tab="set"><b>⚙️</b>Settings</button>
+</nav>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ===================== helpers & state ===================== */
+const KEY = 'daytracker.v1';
+const CATS = ['Food','Transport','Groceries','Bills','Shopping','Health','Entertainment','Other'];
+const DEF = {settings:{apiKey:'',model:'claude-haiku-5-5',waterGoal:8,officeStart:'09:30',budget:800,cur:'₹'},entries:[]};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today = () => ymd(new Date());
+const nowHM = () => { const d = new Date(); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+const toMin = t => { const p = t.split(':').map(Number); return p[0]*60+p[1]; };
+const hm = min => { const r = Math.round(min); return pad(Math.floor(r/60)%24)+':'+pad(r%60); };
+const uid = () => Math.random().toString(36).slice(2,10);
+const addDays = (date, n) => { const d = new Date(date+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); };
+const fmtN = x => +(+x).toFixed(1);
+const avg = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((p,c) => p+c, 0)/v.length : null; };
+const shortDate = d => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+
+function load(){
+  try{
+    const j = JSON.parse(localStorage.getItem(KEY));
+    if(j && Array.isArray(j.entries)) return {settings:{...DEF.settings, ...(j.settings||{})}, entries:j.entries};
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEF));
+}
+let S = load();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save: storage is full or blocked'); } }
+const money = x => S.settings.cur + Math.round(x).toLocaleString('en-IN');
+
+/* ===================== aggregation ===================== */
+function dayData(date){
+  const es = S.entries.filter(e => e.date === date);
+  const wEs = es.filter(e => e.type === 'water');
+  const arr = es.filter(e => e.type === 'arrive').map(e => toMin(e.time));
+  const lv = es.filter(e => e.type === 'leave').map(e => toMin(e.time));
+  const a = arr.length ? Math.min(...arr) : null, l = lv.length ? Math.max(...lv) : null;
+  return {
+    date,
+    water: wEs.length ? wEs.reduce((s,e) => s+e.glasses, 0) : null,
+    arrive: a, leave: l,
+    hours: (a != null && l != null && l > a) ? (l-a)/60 : null,
+    spent: es.filter(e => e.type === 'expense').reduce((s,e) => s+e.amount, 0)
+  };
+}
+function lastDays(n){ const out = []; for(let i = n-1; i >= 0; i--) out.push(addDays(today(), -i)); return out; }
+const PR = {High:0, Medium:1, Low:2};
+const tasks = () => S.entries.filter(e => e.type === 'task');
+
+/* ===================== parsing ===================== */
+function normalize(list){
+  const out = [];
+  for(const e of (list||[])){
+    if(!e || typeof e !== 'object') continue;
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(e.date||'') ? e.date : today();
+    const fixT = t => { const m = String(t||'').match(/^(\d{1,2}):(\d{2})/); return m && +m[1] < 24 && +m[2] < 60 ? pad(+m[1])+':'+m[2] : null; };
+    if(e.type === 'water'){ const g = +e.glasses; if(g > 0 && g < 60) out.push({type:'water', glasses:+g.toFixed(2), date}); }
+    else if(e.type === 'arrive' || e.type === 'leave'){ const t = fixT(e.time); if(t) out.push({type:e.type, time:t, date}); }
+    else if(e.type === 'expense'){ const a = +e.amount; if(a > 0) out.push({type:'expense', amount:a, category:CATS.includes(e.category)?e.category:'Other', note:String(e.note||'').slice(0,80), date}); }
+    else if(e.type === 'task'){ const t = String(e.title||'').trim(); if(t) out.push({type:'task', title:t.slice(0,120), priority:PR[e.priority]!=null?e.priority:'Medium', due:/^\d{4}-\d{2}-\d{2}$/.test(e.due||'')?e.due:'', date}); }
+    else if(e.type === 'task_done'){ const t = String(e.title||'').trim(); if(t) out.push({type:'task_done', title:t.slice(0,120)}); }
+  }
+  return out;
+}
+
+const TIME_RE = /\b(\d{1,2}):(\d{2})\s*(am|pm)?\b|\b(\d{1,2})\s*(am|pm)\b/i;
+function timeTok(m, kind){
+  let h = +(m[1]||m[4]); const mi = +(m[2]||0); const ap = (m[3]||m[5]||'').toLowerCase();
+  if(ap === 'pm' && h < 12) h += 12; else if(ap === 'am' && h === 12) h = 0;
+  else if(!ap && kind === 'leave' && h >= 1 && h <= 8) h += 12;
+  return pad(h)+':'+pad(mi);
+}
+const KW = {
+  Food:/lunch|dinner|breakfast|snack|tea|coffee|food|restaurant|swiggy|zomato|meal|biryani|juice/,
+  Transport:/\bauto\b|cab|uber|\bola\b|\bbus\b|metro|train|fuel|petrol|diesel|taxi|parking|toll/,
+  Groceries:/grocer|vegetable|fruit|milk|kirana|supermarket/,
+  Bills:/bill|recharge|rent|electric|\bemi\b|insurance|wifi|internet/,
+  Shopping:/shopping|clothes|shoes|amazon|flipkart/,
+  Health:/medicine|pharmacy|doctor|hospital|gym|medical/,
+  Entertainment:/movie|netflix|game|concert|party|outing/
+};
+function localParse(text){
+  const entries = [], skipped = [];
+  let date = today();
+  if(/\byesterday\b/i.test(text)) date = addDays(today(), -1);
+  for(let c of text.split(/[\n;]|,(?!\d{3}(?!\d))|\band\b|\.(?=\s|$)/i)){
+    c = c.trim(); if(!c) continue;
+    const low = c.toLowerCase(); let m;
+    if((m = low.match(/^(?:done|finished|completed|did)\s+(.+)/))){ entries.push({type:'task_done', title:m[1]}); continue; }
+    if(/^(?:need to|needs to|have to|must|todo|to do|task|remind me to|remember to|call|buy|pay|book|renew|submit|send|clean|plan|update|read|visit)\b/.test(low) && !/^(paid|spent|bought)/.test(low)){
+      let title = c.replace(/^(?:task\s*:?|todo\s*:?|to do\s*:?|need to|needs to|have to|must|remind me to|remember to)\s*/i, '').replace(/\b(urgent|asap|high priority|low priority)\b/ig,'').trim();
+      title = title.charAt(0).toUpperCase()+title.slice(1);
+      const priority = /urgent|asap|important|high/.test(low) ? 'High' : /\blow\b/.test(low) ? 'Low' : 'Medium';
+      const due = /\btomorrow\b/.test(low) ? addDays(today(), 1) : /\btoday\b/.test(low) ? today() : '';
+      entries.push({type:'task', title, priority, due, date}); continue;
+    }
+    if(/water|glass|drank|drink|litre|liter|bottle/.test(low)){
+      let g = null;
+      if((m = low.match(/(\d+(?:\.\d+)?)\s*(?:glass|glasses|gl)\b/))) g = +m[1];
+      else if((m = low.match(/(\d+(?:\.\d+)?)\s*(?:l|lt|litre|litres|liter|liters)\b/))) g = +m[1]*4;
+      else if((m = low.match(/(\d+)\s*ml\b/))) g = +m[1]/250;
+      else if((m = low.match(/(\d+(?:\.\d+)?)/))) g = +m[1];
+      if(g){ entries.push({type:'water', glasses:+g.toFixed(2), date}); continue; }
+    }
+    const tm = c.match(TIME_RE);
+    if(tm){
+      if(/\b(left|leav|exit|went home|reached home|reaching home|logged off)/.test(low)){ entries.push({type:'leave', time:timeTok(tm,'leave'), date}); continue; }
+      if(/\b(reach|arriv|came|got to|entered|in office|reporting)/.test(low)){ entries.push({type:'arrive', time:timeTok(tm,'arrive'), date}); continue; }
+    }
+    const amt = c.replace(TIME_RE,' ').match(/(?:₹|rs\.?|inr)?\s*(\d[\d,]*(?:\.\d+)?)/i);
+    if(amt){
+      let cat = null; for(const k in KW){ if(KW[k].test(low)){ cat = k; break; } }
+      if(cat || /spent|paid|bought|₹|\brs\b|inr/.test(low)){
+        const note = c.replace(/(?:₹|rs\.?|inr)?\s*\d[\d,]*(?:\.\d+)?/ig,'').replace(/\b(spent|paid|bought|on|for)\b/ig,'').replace(/\s+/g,' ').trim();
+        entries.push({type:'expense', amount:+amt[1].replace(/,/g,''), category:cat||'Other', note, date}); continue;
+      }
+    }
+    skipped.push(c);
+  }
+  return {entries:normalize(entries), skipped};
+}
+
+/* ---- Claude API ---- */
+async function claude(system, user, max){
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'content-type':'application/json','x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:S.settings.model, max_tokens:max||800, system, messages:[{role:'user', content:user}]})
+  });
+  if(!r.ok){ let t = await r.text(); try{ t = JSON.parse(t).error.message; }catch(e){} throw new Error(r.status+' '+String(t).slice(0,120)); }
+  const j = await r.json();
+  return (j.content||[]).map(c => c.text||'').join('');
+}
+async function aiParse(text){
+  const d = new Date();
+  const sys = 'You turn casual notes into JSON for a personal activity tracker. Today is '+today()+' ('+d.toLocaleDateString('en-US',{weekday:'long'})+'), current time '+nowHM()+'. '
+   + 'Reply with ONLY a JSON object {"entries":[...]} and nothing else. Entry shapes: '
+   + '{"type":"water","glasses":number,"date":"YYYY-MM-DD"} (1 glass = 250 ml, 1 litre = 4 glasses); '
+   + '{"type":"arrive","time":"HH:MM","date":"YYYY-MM-DD"} (reached or arrived at office); '
+   + '{"type":"leave","time":"HH:MM","date":"YYYY-MM-DD"} (left office); '
+   + '{"type":"expense","amount":number,"category":"one of '+CATS.join(', ')+'","note":"short","date":"YYYY-MM-DD"}; '
+   + '{"type":"task","title":"short","priority":"High|Medium|Low","due":"YYYY-MM-DD or empty"}; '
+   + '{"type":"task_done","title":"words from the task that was finished"}. '
+   + 'Use 24-hour times; convert 6:45 pm to 18:45; if a time is given without am/pm, assume office hours (arrive in the morning, leave in the evening). '
+   + 'Use "now" = the current time. Dates default to today; resolve words like yesterday or tomorrow. Amounts are plain numbers without currency. Ignore anything that is not one of these.';
+  const out = await claude(sys, text, 800);
+  const m = out.match(/\{[\s\S]*\}/); if(!m) throw new Error('No JSON in reply');
+  return normalize(JSON.parse(m[0]).entries);
+}
+
+/* ===== end of pure logic (tested separately) ===== */
+//#PURE-END
+
+/* ===================== UI ===================== */
+const $ = s => document.querySelector(s);
+let tab = 'home', pending = [], charts = {}, RANGE = 14, hDate = today();
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600); }
+
+function desc(e){
+  const dt = e.date && e.date !== today() ? ' <span class="muted small">('+shortDate(e.date)+')</span>' : '';
+  switch(e.type){
+    case 'water': return '💧 '+fmtN(e.glasses)+' glass'+(e.glasses === 1 ? '' : 'es')+dt;
+    case 'arrive': return '🏢 Arrived '+e.time+dt;
+    case 'leave': return '🚪 Left '+e.time+dt;
+    case 'expense': return '💸 '+money(e.amount)+' · '+esc(e.category)+(e.note ? ' · '+esc(e.note) : '')+dt;
+    case 'task': return '✅ Task: '+esc(e.title)+' <span class="badge '+e.priority+'">'+e.priority+'</span>'+dt;
+    case 'task_done': return '☑️ Finished: '+esc(e.title);
+  }
+  return '';
+}
+
+function renderMode(){
+  $('#mode').textContent = S.settings.apiKey ? 'AI is on: write naturally, in any wording.' : 'AI is off (no API key in Settings): using a simple offline parser. Try short phrases like "lunch 180, 3 glasses water".';
+  $('#go').textContent = S.settings.apiKey ? 'Add with AI' : 'Add';
+}
+function renderPreview(res, raw){
+  const box = $('#preview');
+  if(!res){ box.innerHTML = ''; return; }
+  let h = '<div style="margin-top:10px"><b class="small">Check before saving</b>';
+  if(res.entries.length){
+    res.entries.forEach((e,i) => { h += '<div class="item"><div class="t">'+desc(e)+'</div><button class="x" data-del="'+i+'">✕</button></div>'; });
+    h += '<div class="row"><button id="pCancel">Cancel</button><button id="pSave" class="primary">Save '+res.entries.length+'</button></div>';
+  }else{
+    h += '<p class="muted small">I could not find anything to log in that text.</p><div class="row"><button id="pCancel">OK</button></div>';
+  }
+  if(res.skipped && res.skipped.length) h += '<p class="muted small">Not understood: '+res.skipped.map(esc).join(' | ')+'</p>';
+  box.innerHTML = h+'</div>';
+}
+
+function findTask(title){
+  const open = tasks().filter(t => t.status !== 'done'), q = title.toLowerCase();
+  let hit = open.find(t => t.title.toLowerCase().includes(q) || q.includes(t.title.toLowerCase()));
+  if(hit) return hit;
+  const words = q.split(/\W+/).filter(w => w.length > 2); let best = null, bs = 0;
+  for(const t of open){ const tl = t.title.toLowerCase(); const s = words.filter(w => tl.includes(w)).length; if(s > bs){ bs = s; best = t; } }
+  return best;
+}
+function commit(list){
+  let n = 0, done = 0;
+  for(const e of list){
+    if(e.type === 'task_done'){
+      const t = findTask(e.title);
+      if(t){ t.status = 'done'; t.doneDate = today(); done++; }
+      else S.entries.push({id:uid(), type:'task', date:today(), title:e.title, priority:'Medium', due:'', status:'done', doneDate:today()});
+      n++; continue;
+    }
+    const x = {id:uid(), ...e}; if(x.type === 'task'){ x.status = 'todo'; x.due = x.due || ''; }
+    S.entries.push(x); n++;
+  }
+  save(); renderAll(); toast('Saved '+n+' item'+(n === 1 ? '' : 's'));
+}
+function quickAdd(k){
+  if(k === 'w1' || k === 'w2'){ const g = k === 'w1' ? 1 : 2; commit([{type:'water', glasses:g, date:today()}]); }
+  if(k === 'in') commit([{type:'arrive', time:nowHM(), date:today()}]);
+  if(k === 'out') commit([{type:'leave', time:nowHM(), date:today()}]);
+}
+
+function dayCards(d){
+  const s = S.settings;
+  const water = d.water || 0, wp = Math.min(100, water/s.waterGoal*100);
+  const over = d.spent > s.budget, sp = s.budget > 0 ? Math.min(100, d.spent/s.budget*100) : 0;
+  const late = d.arrive != null && d.arrive > toMin(s.officeStart);
+  return '<div class="kpi"><div class="l">💧 Water</div><div class="v">'+fmtN(water)+' <span class="s">/ '+s.waterGoal+'</span></div><div class="bar"><i style="width:'+wp+'%"></i></div></div>'+
+    '<div class="kpi"><div class="l">💸 Spent</div><div class="v">'+money(d.spent)+'</div><div class="s">budget '+money(s.budget)+'</div><div class="bar '+(over?'over':'')+'"><i style="width:'+sp+'%"></i></div></div>'+
+    '<div class="kpi"><div class="l">🏢 Arrived</div><div class="v '+(late?'late':'')+'">'+(d.arrive != null ? hm(d.arrive) : '--:--')+'</div><div class="s">'+(late ? 'late vs '+s.officeStart : 'start '+s.officeStart)+'</div></div>'+
+    '<div class="kpi"><div class="l">🚪 Left</div><div class="v">'+(d.leave != null ? hm(d.leave) : '--:--')+'</div><div class="s">'+(d.hours != null ? fmtN(d.hours)+' h at office' : 'not left yet')+'</div></div>';
+}
+function renderToday(){
+  $('#todayCards').innerHTML = dayCards(dayData(today()));
+  const es = S.entries.filter(e => e.date === today() && e.type !== 'task').slice().reverse();
+  $('#todayList').innerHTML = es.length ? es.map(e => '<div class="item"><div class="t">'+desc(e)+'</div><button class="x" data-rm="'+e.id+'">✕</button></div>').join('') : '<span class="muted small">Nothing logged yet today.</span>';
+}
+
+function renderTasks(){
+  const open = tasks().filter(t => t.status !== 'done').sort((a,b) => (PR[a.priority]-PR[b.priority]) || String(a.due||'9999').localeCompare(String(b.due||'9999')));
+  const done = tasks().filter(t => t.status === 'done').sort((a,b) => String(b.doneDate||'').localeCompare(String(a.doneDate||''))).slice(0,30);
+  const row = t => '<div class="item"><input type="checkbox" style="width:22px;height:22px" '+(t.status === 'done' ? 'checked' : '')+' data-tg="'+t.id+'"><div class="t">'+esc(t.title)+
+    '<div class="small muted"><span class="badge '+t.priority+'">'+t.priority+'</span> '+(t.due ? '<span class="'+(t.status !== 'done' && t.due < today() ? 'late' : '')+'">due '+shortDate(t.due)+'</span>' : '')+'</div></div><button class="x" data-rm="'+t.id+'">✕</button></div>';
+  $('#tOpen').innerHTML = open.length ? open.map(row).join('') : '<span class="muted small">No open tasks. Nice.</span>';
+  $('#tDone').innerHTML = done.length ? done.map(row).join('') : '<span class="muted small">Nothing finished yet.</span>';
+}
+
+function renderHistory(){
+  const d = dayData(hDate);
+  $('#hDate').value = hDate; $('#hDate').max = today();
+  $('#hCards').innerHTML = dayCards(d);
+  const es = S.entries.filter(e => e.date === hDate).slice().reverse();
+  $('#hList').innerHTML = es.length ? es.map(e => '<div class="item"><div class="t">'+desc(e)+'</div><button class="x" data-rm="'+e.id+'">✕</button></div>').join('') : '<span class="muted small">Nothing logged on this day.</span>';
+  const rows = lastDays(30).reverse().map(dayData);
+  $('#hTable').innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="muted small" style="text-align:left"><th>Date</th><th>💧</th><th>In</th><th>Out</th><th>Hrs</th><th>Spent</th></tr>'+
+    rows.map(r => '<tr data-d="'+r.date+'" style="border-top:1px solid var(--line);'+(r.date === hDate ? 'background:var(--soft);' : '')+'"><td style="padding:8px 4px">'+shortDate(r.date)+'</td><td>'+(r.water != null ? fmtN(r.water) : '–')+'</td><td>'+(r.arrive != null ? hm(r.arrive) : '–')+'</td><td>'+(r.leave != null ? hm(r.leave) : '–')+'</td><td>'+(r.hours != null ? fmtN(r.hours) : '–')+'</td><td>'+(r.spent ? money(r.spent) : '–')+'</td></tr>').join('')+'</table>';
+}
+
+function insightsLocal(days){
+  const s = S.settings, out = [];
+  const w = days.map(d => d.water).filter(x => x != null);
+  if(w.length) out.push('💧 Water: goal met on '+w.filter(x => x >= s.waterGoal).length+' of '+w.length+' logged days; average '+fmtN(avg(w))+' glasses (goal '+s.waterGoal+').');
+  const ar = days.map(d => d.arrive).filter(x => x != null);
+  if(ar.length) out.push('🏢 Office: average arrival '+hm(avg(ar))+', later than '+s.officeStart+' on '+ar.filter(x => x > toMin(s.officeStart)).length+' of '+ar.length+' days'+(avg(days.map(d => d.hours)) != null ? '; about '+fmtN(avg(days.map(d => d.hours)))+' h per day.' : '.'));
+  const tot = days.reduce((a,d) => a+d.spent, 0);
+  if(tot > 0){
+    const bc = {}; S.entries.filter(e => e.type === 'expense' && days.some(d => d.date === e.date)).forEach(e => bc[e.category] = (bc[e.category]||0)+e.amount);
+    const top = Object.entries(bc).sort((a,b) => b[1]-a[1])[0];
+    out.push('💸 Money: '+money(tot)+' in '+days.length+' days (avg '+money(tot/days.length)+'/day); biggest category '+top[0]+' ('+money(top[1])+'); over budget on '+days.filter(d => d.spent > s.budget).length+' days.');
+  }
+  const open = tasks().filter(t => t.status !== 'done');
+  out.push('✅ Tasks: '+open.length+' open, '+open.filter(t => t.priority === 'High').length+' high priority, '+open.filter(t => t.due && t.due < today()).length+' overdue.');
+  return out;
+}
+
+function kpi(l, v, s){ return '<div class="kpi"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>'; }
+function renderDash(){
+  const dates = lastDays(RANGE), days = dates.map(dayData), s = S.settings;
+  const w = days.map(d => d.water), ar = days.map(d => d.arrive), hr = days.map(d => d.hours);
+  const wl = w.filter(x => x != null), arl = ar.filter(x => x != null);
+  const tot = days.reduce((a,d) => a+d.spent, 0), open = tasks().filter(t => t.status !== 'done');
+  $('#kpis').innerHTML =
+    kpi('Avg water / day', wl.length ? fmtN(avg(w)) : '–', 'goal '+s.waterGoal+' glasses') +
+    kpi('Water goal met', wl.length ? wl.filter(x => x >= s.waterGoal).length : '–', 'of '+wl.length+' logged days') +
+    kpi('Avg arrival', arl.length ? hm(avg(ar)) : '–', 'start '+s.officeStart) +
+    kpi('Late days', arl.length ? arl.filter(x => x > toMin(s.officeStart)).length : '–', 'of '+arl.length+' logged days') +
+    kpi('Avg hours at office', avg(hr) != null ? fmtN(avg(hr)) : '–', 'per day') +
+    kpi('Spent ('+RANGE+' days)', money(tot), 'avg '+money(tot/RANGE)+' / day') ;
+  $('#insights').innerHTML = insightsLocal(days).map(x => '<div style="margin:4px 0">'+esc(x)+'</div>').join('');
+  if(typeof Chart === 'undefined'){ $('#charts').innerHTML = '<div class="card muted small">Charts need an internet connection the first time the page loads (Chart.js). Reload when online.</div>'; return; }
+  const cs = getComputedStyle(document.documentElement), tx = cs.getPropertyValue('--muted').trim(), gr = cs.getPropertyValue('--line').trim();
+  const labels = dates.map(shortDate);
+  const base = (extra) => {
+    const o = {responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{labels:{color:tx, boxWidth:10, font:{size:11}}}},
+      scales:{x:{ticks:{color:tx, maxRotation:0, autoSkip:true, font:{size:10}}, grid:{display:false}}, y:{beginAtZero:true, ticks:{color:tx, font:{size:10}}, grid:{color:gr}}}};
+    return Object.assign(o, extra||{});
+  };
+  const mk = (id, cfg) => { if(charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); };
+  const flat = v => days.map(() => v);
+  mk('c-water', {data:{labels, datasets:[
+    {type:'bar', label:'Glasses', data:w, backgroundColor:'#2E75B6', borderRadius:3},
+    {type:'line', label:'Goal', data:flat(s.waterGoal), borderColor:'#ED7D31', borderDash:[5,4], pointRadius:0, borderWidth:2}]}, options:base()});
+  const timeOpt = base(); timeOpt.scales.y = {beginAtZero:false, ticks:{color:tx, font:{size:10}, stepSize:60, callback:v => hm(v)}, grid:{color:gr}};
+  timeOpt.plugins.tooltip = {callbacks:{label:c => c.dataset.label+': '+hm(c.parsed.y)}};
+  mk('c-time', {type:'line', data:{labels, datasets:[
+    {label:'Arrival', data:ar, borderColor:'#2E9E5B', backgroundColor:'#2E9E5B', spanGaps:true, tension:.25, pointRadius:3},
+    {label:'Leaving', data:days.map(d => d.leave), borderColor:'#7B4EA3', backgroundColor:'#7B4EA3', spanGaps:true, tension:.25, pointRadius:3},
+    {label:'Office start', data:flat(toMin(s.officeStart)), borderColor:'#8C8C8C', borderDash:[5,4], pointRadius:0, borderWidth:1.5}]}, options:timeOpt});
+  mk('c-hours', {type:'bar', data:{labels, datasets:[{label:'Hours', data:hr.map(x => x != null ? +x.toFixed(2) : null), backgroundColor:'#1B998B', borderRadius:3}]}, options:base({plugins:{legend:{display:false}}})});
+  mk('c-spend', {data:{labels, datasets:[
+    {type:'bar', label:'Spent', data:days.map(d => d.spent), backgroundColor:'#C0504D', borderRadius:3},
+    {type:'line', label:'Budget', data:flat(s.budget), borderColor:'#7a7a7a', borderDash:[5,4], pointRadius:0, borderWidth:2}]}, options:base()});
+  const bc = {}; S.entries.filter(e => e.type === 'expense' && dates.includes(e.date)).forEach(e => bc[e.category] = (bc[e.category]||0)+e.amount);
+  const ck = Object.keys(bc);
+  const pie = {responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{position:'right', labels:{color:tx, boxWidth:10, font:{size:11}}}}};
+  mk('c-cat', {type:'doughnut', data:{labels:ck.length ? ck : ['No data'], datasets:[{data:ck.length ? ck.map(k => bc[k]) : [1], backgroundColor:ck.length ? ['#2E75B6','#ED7D31','#2E9E5B','#7B4EA3','#C0504D','#1B998B','#E0B01E','#8C8C8C'] : [gr], borderWidth:0}]}, options:pie});
+  const tk = tasks(), td = tk.filter(t => t.status === 'done').length, to = tk.length-td;
+  mk('c-task', {type:'doughnut', data:{labels:tk.length ? ['Open','Done'] : ['No data'], datasets:[{data:tk.length ? [to,td] : [1], backgroundColor:tk.length ? ['#ED7D31','#2E9E5B'] : [gr], borderWidth:0}]}, options:pie});
+}
+
+async function runCoach(){
+  const out = $('#coachOut');
+  if(!S.settings.apiKey){ out.textContent = 'Add your Anthropic API key in Settings to get AI coaching. The insights above work without it.'; return; }
+  const b = $('#coachBtn'); b.disabled = true; b.textContent = 'Thinking…'; out.textContent = '';
+  try{
+    const dates = lastDays(14), days = dates.map(dayData);
+    const bc = {}; S.entries.filter(e => e.type === 'expense' && dates.includes(e.date)).forEach(e => bc[e.category] = (bc[e.category]||0)+e.amount);
+    const open = tasks().filter(t => t.status !== 'done');
+    const payload = {
+      goals:{waterGlassesPerDay:S.settings.waterGoal, officeStart:S.settings.officeStart, dailyBudget:S.settings.budget, currency:S.settings.cur},
+      days:days.map(d => ({date:d.date, waterGlasses:d.water, arrived:d.arrive != null ? hm(d.arrive) : null, left:d.leave != null ? hm(d.leave) : null, hoursAtOffice:d.hours != null ? +d.hours.toFixed(1) : null, spent:d.spent})),
+      spendByCategory:bc, openTasks:open.map(t => ({title:t.title, priority:t.priority, due:t.due||null}))
+    };
+    const sys = 'You are a practical, kind habit coach reviewing 14 days of a person\'s water intake, office arrival and leaving times, spending and personal tasks. Missing values mean not logged, not zero. '
+      + 'Reply in plain text with no markdown: first a one-sentence overall read, then exactly 4 short lines each starting with "• " that cite specific numbers and dates from the data (water, punctuality, money, tasks), then one line starting "Tomorrow: " with a single small concrete action. Under 170 words.';
+    out.textContent = await claude(sys, JSON.stringify(payload), 700);
+  }catch(e){ out.textContent = 'AI coach failed: '+e.message; }
+  b.disabled = false; b.textContent = 'Ask AI coach';
+}
+
+function renderSettings(){
+  const s = S.settings;
+  $('#sKey').value = s.apiKey; $('#sModel').value = s.model; $('#sWater').value = s.waterGoal;
+  $('#sStart').value = s.officeStart; $('#sBudget').value = s.budget; $('#sCur').value = s.cur;
+}
+
+function show(t){
+  tab = t;
+  document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== 'v-'+t);
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  window.scrollTo(0,0); renderAll();
+}
+function renderAll(){
+  $('#dateLine').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'});
+  if(tab === 'home'){ renderMode(); renderToday(); }
+  if(tab === 'dash') renderDash();
+  if(tab === 'hist') renderHistory();
+  if(tab === 'tasks') renderTasks();
+  if(tab === 'set') renderSettings();
+}
+
+/* ===================== sample, backup ===================== */
+function loadSample(){
+  const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+  for(let i = 14; i >= 1; i--){
+    const date = addDays(today(), -i), wd = new Date(date+'T00:00:00').getDay();
+    const add = o => S.entries.push({id:uid(), date, sample:true, ...o});
+    add({type:'water', glasses:rnd(4,10)});
+    if(wd > 0 && wd < 6){
+      add({type:'arrive', time:pad(rnd(8,10))+':'+pad(rnd(0,59))}); add({type:'leave', time:pad(rnd(17,19))+':'+pad(rnd(0,59))});
+      add({type:'expense', amount:rnd(120,260), category:'Food', note:'Lunch'}); add({type:'expense', amount:rnd(60,180), category:'Transport', note:'Commute'});
+    }else add({type:'expense', amount:rnd(300,1400), category:['Groceries','Shopping','Entertainment'][rnd(0,2)], note:'Weekend'});
+  }
+  [['Pay credit card bill','High','done'],['Renew car insurance','High','todo'],['Book dentist appointment','Medium','todo'],['Clean up laptop files','Low','todo'],['Buy birthday gift','Medium','done']].forEach(t =>
+    S.entries.push({id:uid(), type:'task', sample:true, date:addDays(today(),-5), title:t[0], priority:t[1], due:addDays(today(), rnd(-1,6)), status:t[2], doneDate:t[2] === 'done' ? addDays(today(),-2) : ''}));
+  save(); renderAll(); toast('Sample data loaded');
+}
+function download(name, text, type){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+function toCsv(){
+  const cols = ['type','date','time','glasses','amount','category','note','title','priority','due','status'];
+  const q = v => '"'+String(v ?? '').replace(/"/g,'""')+'"';
+  return [cols.join(',')].concat(S.entries.map(e => cols.map(c => q(e[c])).join(','))).join('\n');
+}
+
+/* ===================== events ===================== */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
+document.querySelectorAll('.quick button').forEach(b => b.onclick = () => quickAdd(b.dataset.q));
+
+$('#go').onclick = async () => {
+  const t = $('#note').value.trim(); if(!t) return;
+  const b = $('#go'), label = b.textContent; b.disabled = true; b.textContent = 'Thinking…';
+  let res;
+  try{
+    res = S.settings.apiKey ? {entries:await aiParse(t), skipped:[]} : localParse(t);
+  }catch(err){
+    toast('AI failed ('+err.message.slice(0,70)+'). Used offline parser.'); res = localParse(t);
+  }
+  b.disabled = false; b.textContent = label;
+  pending = res.entries; renderPreview(res);
+};
+$('#preview').onclick = e => {
+  const del = e.target.dataset.del;
+  if(del != null){ pending.splice(+del, 1); renderPreview({entries:pending, skipped:[]}); return; }
+  if(e.target.id === 'pCancel'){ pending = []; renderPreview(null); }
+  if(e.target.id === 'pSave'){ const l = pending; pending = []; renderPreview(null); $('#note').value = ''; commit(l); }
+};
+const rmHandler = e => {
+  const id = e.target.dataset.rm, tg = e.target.dataset.tg;
+  if(id){ S.entries = S.entries.filter(x => x.id !== id); save(); renderAll(); }
+  if(tg){ const t = S.entries.find(x => x.id === tg); if(t){ t.status = t.status === 'done' ? 'todo' : 'done'; t.doneDate = t.status === 'done' ? today() : ''; save(); renderAll(); } }
+};
+$('#todayList').onclick = rmHandler; $('#tOpen').onclick = rmHandler; $('#tDone').onclick = rmHandler;
+$('#tAdd').onclick = () => {
+  const title = $('#tTitle').value.trim(); if(!title) return;
+  commit([{type:'task', title, priority:$('#tPrio').value, due:$('#tDue').value||'', date:today()}]);
+  $('#tTitle').value = ''; $('#tDue').value = '';
+};
+$('#coachBtn').onclick = runCoach;
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if(SR){
+  $('#mic').hidden = false;
+  $('#mic').onclick = () => {
+    const r = new SR(); r.lang = 'en-IN'; r.interimResults = false;
+    r.onresult = ev => { const t = ev.results[0][0].transcript; $('#note').value = ($('#note').value+' '+t).trim(); };
+    r.onerror = () => toast('Voice input not available'); r.onstart = () => toast('Listening…');
+    try{ r.start(); }catch(e){}
+  };
+}
+
+const bind = (id, key, conv) => $(id).onchange = () => { S.settings[key] = conv($(id).value); save(); renderAll(); toast('Saved'); };
+bind('#sKey','apiKey', v => v.trim()); bind('#sModel','model', v => v);
+bind('#sWater','waterGoal', v => Math.max(1, +v||8)); bind('#sStart','officeStart', v => v||'09:30');
+bind('#sBudget','budget', v => Math.max(0, +v||0)); bind('#sCur','cur', v => v||'₹');
+$('#bJson').onclick = () => { const c = JSON.parse(JSON.stringify(S)); c.settings.apiKey = ''; download('daytracker-backup-'+today()+'.json', JSON.stringify(c, null, 1), 'application/json'); };
+$('#bCsv').onclick = () => download('daytracker-'+today()+'.csv', toCsv(), 'text/csv');
+$('#bImport').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const j = JSON.parse(await f.text()); if(!Array.isArray(j.entries)) throw new Error('not a backup file');
+    if(!confirm('Replace current data with '+j.entries.length+' entries from this backup?')) return;
+    S.entries = j.entries; S.settings = {...S.settings, ...(j.settings||{}), apiKey:S.settings.apiKey}; save(); renderAll(); toast('Backup imported');
+  }catch(err){ toast('Import failed: '+err.message); }
+  e.target.value = '';
+};
+$('#bSample').onclick = loadSample;
+$('#bUnsample').onclick = () => { S.entries = S.entries.filter(e => !e.sample); save(); renderAll(); toast('Sample data removed'); };
+$('#bErase').onclick = () => { if(confirm('Erase ALL your logged data on this device? Export a backup first if unsure.')){ S.entries = []; save(); renderAll(); toast('Erased'); } };
+
+$('#hDate').onchange = () => { if($('#hDate').value){ hDate = $('#hDate').value; renderHistory(); } };
+$('#hPrev').onclick = () => { hDate = addDays(hDate, -1); renderHistory(); };
+$('#hNext').onclick = () => { if(hDate < today()){ hDate = addDays(hDate, 1); renderHistory(); } };
+$('#hTable').onclick = e => { const tr = e.target.closest('tr[data-d]'); if(tr){ hDate = tr.dataset.d; renderHistory(); window.scrollTo(0,0); } };
+$('#hList').onclick = rmHandler;
+$('#range').onchange = () => { RANGE = +$('#range').value; renderDash(); };
+
+renderAll();
+</script>
+</body>
+</html>
