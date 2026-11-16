@@ -27,9 +27,13 @@ button.danger{color:var(--bad)}
 button:disabled{opacity:.6}
 .row{display:flex;gap:8px;margin-top:8px}.row>.primary{flex:1}
 .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
-.quick button{padding:10px 4px;font-size:13px;border:1px solid var(--line);background:var(--card)}
+.quick button{padding:10px 2px;font-size:12px;border:1px solid var(--line);background:var(--card)}
+.seg{display:flex;gap:6px;margin:10px 0}
+.seg button{flex:1;border:1px solid var(--line);background:var(--card);padding:9px 4px;font-size:13px}
+.seg button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.kpi.wide{grid-column:1/-1}
 .kpi .l{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .kpi .v{font-size:24px;font-weight:700;color:var(--navy)}
 @media (prefers-color-scheme:dark){.kpi .v{color:#cfe1f7}}
@@ -47,12 +51,15 @@ button:disabled{opacity:.6}
 .chartbox{position:relative;height:220px}
 .chartbox.sm{height:200px}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;background:none;border-radius:0;padding:10px 0 8px;font-size:11px;color:var(--muted)}
-nav button b{display:block;font-size:19px;font-weight:400}
+nav button{flex:1;background:none;border-radius:0;padding:9px 0 7px;font-size:10px;color:var(--muted)}
+nav button b{display:block;font-size:18px;font-weight:400}
 nav button.on{color:var(--brand);font-weight:600}
 #toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222;color:#fff;padding:9px 14px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
 #toast.show{opacity:.95}
 .coach{white-space:pre-wrap}
+table.t{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+table.t th{font-size:11px;color:var(--muted);text-align:left;padding:4px}
+table.t td{padding:8px 4px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -61,7 +68,7 @@ nav button.on{color:var(--brand);font-weight:600}
   <section id="v-home" class="view">
     <h1>Day Tracker</h1><div id="dateLine" class="muted"></div>
     <div class="card">
-      <textarea id="note" rows="3" placeholder="Tell me about your day, e.g. reached office 9:20, drank 3 glasses, lunch 180, need to call electrician"></textarea>
+      <textarea id="note" rows="3" placeholder="Tell me about your day, e.g. reached office 9:20, drank 3 glasses, lunch 180, studied 1h, walked 30 min, phone 2h 40m, need to call electrician"></textarea>
       <div class="row"><button id="mic" title="Speak" hidden>🎤</button><button id="go" class="primary">Add</button></div>
       <div id="mode" class="muted small" style="margin-top:6px"></div>
       <div id="preview"></div>
@@ -72,13 +79,20 @@ nav button.on{color:var(--brand);font-weight:600}
       <button data-q="in">🏢 Arrived</button>
       <button data-q="out">🚪 Leaving</button>
     </div>
+    <div class="quick">
+      <button data-q="st">📚 Study +30m</button>
+      <button data-q="rd">📖 Read +30m</button>
+      <button data-q="ex">🏃 Exercise +30m</button>
+      <button data-q="ph">📱 Phone time</button>
+    </div>
     <div id="todayCards" class="grid2"></div>
     <h2>Today's log</h2>
     <div class="card" id="todayList"></div>
   </section>
 
   <section id="v-dash" class="view" hidden>
-    <h1>Dashboard</h1><div class="row" style="margin-top:6px"><select id="range" style="width:auto"><option value="7">Last 7 days</option><option value="14" selected>Last 14 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></div>
+    <h1>Dashboard</h1>
+    <div class="row" style="margin-top:6px"><select id="range" style="width:auto"><option value="7">Last 7 days</option><option value="14" selected>Last 14 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></div>
     <div id="kpis" class="grid2" style="margin-top:10px"></div>
     <div class="card"><b>Insights</b><div id="insights" class="small" style="margin-top:6px"></div>
       <div class="row"><button id="coachBtn" class="primary">Ask AI coach</button></div>
@@ -88,9 +102,63 @@ nav button.on{color:var(--brand);font-weight:600}
       <div class="card"><b>Water vs goal</b><div class="chartbox"><canvas id="c-water"></canvas></div></div>
       <div class="card"><b>Arrival &amp; leaving time</b><div class="chartbox"><canvas id="c-time"></canvas></div></div>
       <div class="card"><b>Hours at office</b><div class="chartbox"><canvas id="c-hours"></canvas></div></div>
+      <div class="card"><b>Study &amp; reading (minutes)</b><div class="chartbox"><canvas id="c-study"></canvas></div></div>
+      <div class="card"><b>Exercise (minutes)</b><div class="chartbox"><canvas id="c-ex"></canvas></div></div>
+      <div class="card"><b>Phone screen time (hours)</b><div class="chartbox"><canvas id="c-phone"></canvas></div></div>
       <div class="card"><b>Daily spending vs budget</b><div class="chartbox"><canvas id="c-spend"></canvas></div></div>
       <div class="card"><b>Spend by category</b><div class="chartbox sm"><canvas id="c-cat"></canvas></div></div>
       <div class="card"><b>Tasks</b><div class="chartbox sm"><canvas id="c-task"></canvas></div></div>
+    </div>
+  </section>
+
+  <section id="v-habits" class="view" hidden>
+    <h1>Habits</h1>
+    <div class="seg" id="hseg">
+      <button data-h="study" class="on">📚 Study</button>
+      <button data-h="ex">🏃 Exercise</button>
+      <button data-h="phone">📱 Phone</button>
+    </div>
+
+    <div id="hb-study" class="hb">
+      <div class="card">
+        <div class="grid2">
+          <div><label style="margin-top:0">Type</label><select id="fsKind"><option>Study</option><option>Reading</option></select></div>
+          <div><label style="margin-top:0">Time spent</label><input id="fsMin" placeholder="45 or 1h 30m"></div>
+        </div>
+        <label>Subject or book (optional)</label><input id="fsSub" placeholder="e.g. Maths chapter 4, Atomic Habits">
+        <label>Date</label><input id="fsDate" type="date">
+        <div class="row"><button id="fsAdd" class="primary">Add</button></div>
+      </div>
+      <div id="hsKpi" class="grid2"></div>
+      <div class="card"><b>Last 14 days</b><div class="chartbox"><canvas id="h-study"></canvas></div></div>
+      <h2>Recent entries</h2><div class="card" id="hsList"></div>
+    </div>
+
+    <div id="hb-ex" class="hb" hidden>
+      <div class="card">
+        <div class="grid2">
+          <div><label style="margin-top:0">Activity</label><input id="feAct" placeholder="walk, gym, yoga…"></div>
+          <div><label style="margin-top:0">Time spent</label><input id="feMin" placeholder="30 or 1h"></div>
+        </div>
+        <label>Date</label><input id="feDate" type="date">
+        <div class="row"><button id="feAdd" class="primary">Add</button></div>
+      </div>
+      <div id="heKpi" class="grid2"></div>
+      <div class="card"><b>Last 14 days</b><div class="chartbox"><canvas id="h-ex"></canvas></div></div>
+      <h2>Recent entries</h2><div class="card" id="heList"></div>
+    </div>
+
+    <div id="hb-phone" class="hb" hidden>
+      <div class="card">
+        <label style="margin-top:0">Total phone screen time for the day</label><input id="fpMin" placeholder="2h 30m, 2.5h or 150">
+        <p class="muted small" style="margin:6px 0 0">Read it from your phone's Digital Wellbeing (Android) or Screen Time (iPhone). Logging again for the same date replaces that day's total.</p>
+        <label>Most-used app (optional)</label><input id="fpNote" placeholder="e.g. YouTube">
+        <label>Date</label><input id="fpDate" type="date">
+        <div class="row"><button id="fpAdd" class="primary">Save</button></div>
+      </div>
+      <div id="hpKpi" class="grid2"></div>
+      <div class="card"><b>Last 14 days</b><div class="chartbox"><canvas id="h-phone"></canvas></div></div>
+      <h2>Recent entries</h2><div class="card" id="hpList"></div>
     </div>
   </section>
 
@@ -136,6 +204,9 @@ nav button.on{color:var(--brand);font-weight:600}
         <div><label>Office start time</label><input id="sStart" type="time"></div>
         <div><label>Daily budget</label><input id="sBudget" type="number" min="0" step="50"></div>
         <div><label>Currency symbol</label><input id="sCur" maxlength="3"></div>
+        <div><label>Study + reading goal (min/day)</label><input id="sStudy" type="number" min="1" step="5"></div>
+        <div><label>Exercise goal (min/day)</label><input id="sEx" type="number" min="1" step="5"></div>
+        <div><label>Phone limit (hours/day)</label><input id="sPhone" type="number" min="0.5" step="0.5"></div>
       </div>
     </div>
     <div class="card">
@@ -155,6 +226,7 @@ nav button.on{color:var(--brand);font-weight:600}
 <nav>
   <button data-tab="home" class="on"><b>🏠</b>Home</button>
   <button data-tab="dash"><b>📊</b>Dashboard</button>
+  <button data-tab="habits"><b>🎯</b>Habits</button>
   <button data-tab="hist"><b>🗓️</b>History</button>
   <button data-tab="tasks"><b>✅</b>Tasks</button>
   <button data-tab="set"><b>⚙️</b>Settings</button>
@@ -166,7 +238,7 @@ nav button.on{color:var(--brand);font-weight:600}
 /* ===================== helpers & state ===================== */
 const KEY = 'daytracker.v1';
 const CATS = ['Food','Transport','Groceries','Bills','Shopping','Health','Entertainment','Other'];
-const DEF = {settings:{apiKey:'',model:'claude-haiku-5-5',waterGoal:8,officeStart:'09:30',budget:800,cur:'₹'},entries:[]};
+const DEF = {settings:{apiKey:'',model:'claude-haiku-5-5',waterGoal:8,officeStart:'09:30',budget:800,cur:'₹',studyGoal:60,exerciseGoal:30,phoneLimit:3},entries:[]};
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2,'0');
 const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -177,8 +249,24 @@ const hm = min => { const r = Math.round(min); return pad(Math.floor(r/60)%24)+'
 const uid = () => Math.random().toString(36).slice(2,10);
 const addDays = (date, n) => { const d = new Date(date+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); };
 const fmtN = x => +(+x).toFixed(1);
+const fmtDur = m => { m = Math.round(m); const h = Math.floor(m/60), r = m%60; return h ? (r ? h+'h '+pad(r)+'m' : h+'h') : r+'m'; };
 const avg = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((p,c) => p+c, 0)/v.length : null; };
+const sum = a => a.reduce((p,c) => p+(c||0), 0);
 const shortDate = d => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+
+/* durations: "2h 30m", "2.5 hours", "45 min" -> minutes; bare number or 1:30 in forms */
+function durIn(s){
+  const re = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)(?![a-z])/g; let m, tot = 0, hit = false;
+  s = String(s).toLowerCase();
+  while((m = re.exec(s))){ hit = true; tot += /^h/.test(m[2]) ? +m[1]*60 : +m[1]; }
+  return hit ? Math.round(tot) : null;
+}
+function parseDur(str){
+  const s = String(str).trim().toLowerCase(); const d = durIn(s); if(d != null) return d;
+  let c = s.match(/^(\d{1,2}):(\d{2})$/); if(c) return +c[1]*60 + +c[2];
+  c = s.match(/^(\d+(?:\.\d+)?)$/); if(c) return Math.round(+c[1]);
+  return null;
+}
 
 function load(){
   try{
@@ -198,15 +286,29 @@ function dayData(date){
   const arr = es.filter(e => e.type === 'arrive').map(e => toMin(e.time));
   const lv = es.filter(e => e.type === 'leave').map(e => toMin(e.time));
   const a = arr.length ? Math.min(...arr) : null, l = lv.length ? Math.max(...lv) : null;
+  const st = es.filter(e => e.type === 'study');
+  const sM = sum(st.filter(e => e.kind !== 'Reading').map(e => e.minutes));
+  const rM = sum(st.filter(e => e.kind === 'Reading').map(e => e.minutes));
+  const ex = es.filter(e => e.type === 'exercise');
+  const sc = es.filter(e => e.type === 'screen');
   return {
     date,
-    water: wEs.length ? wEs.reduce((s,e) => s+e.glasses, 0) : null,
+    water: wEs.length ? sum(wEs.map(e => e.glasses)) : null,
     arrive: a, leave: l,
     hours: (a != null && l != null && l > a) ? (l-a)/60 : null,
-    spent: es.filter(e => e.type === 'expense').reduce((s,e) => s+e.amount, 0)
+    spent: sum(es.filter(e => e.type === 'expense').map(e => e.amount)),
+    studyM: st.length ? sM : null, readM: st.length ? rM : null, learn: st.length ? sM+rM : null,
+    exercise: ex.length ? sum(ex.map(e => e.minutes)) : null,
+    screen: sc.length ? sc[sc.length-1].minutes : null
   };
 }
 function lastDays(n){ const out = []; for(let i = n-1; i >= 0; i--) out.push(addDays(today(), -i)); return out; }
+function streak(fn){
+  let n = 0, d = today();
+  if(!fn(dayData(d))) d = addDays(d, -1);
+  while(n < 400 && fn(dayData(d))){ n++; d = addDays(d, -1); }
+  return n;
+}
 const PR = {High:0, Medium:1, Low:2};
 const tasks = () => S.entries.filter(e => e.type === 'task');
 
@@ -217,11 +319,15 @@ function normalize(list){
     if(!e || typeof e !== 'object') continue;
     const date = /^\d{4}-\d{2}-\d{2}$/.test(e.date||'') ? e.date : today();
     const fixT = t => { const m = String(t||'').match(/^(\d{1,2}):(\d{2})/); return m && +m[1] < 24 && +m[2] < 60 ? pad(+m[1])+':'+m[2] : null; };
+    const mins = v => { const m = Math.round(+v); return m > 0 && m <= 1440 ? m : null; };
     if(e.type === 'water'){ const g = +e.glasses; if(g > 0 && g < 60) out.push({type:'water', glasses:+g.toFixed(2), date}); }
     else if(e.type === 'arrive' || e.type === 'leave'){ const t = fixT(e.time); if(t) out.push({type:e.type, time:t, date}); }
     else if(e.type === 'expense'){ const a = +e.amount; if(a > 0) out.push({type:'expense', amount:a, category:CATS.includes(e.category)?e.category:'Other', note:String(e.note||'').slice(0,80), date}); }
     else if(e.type === 'task'){ const t = String(e.title||'').trim(); if(t) out.push({type:'task', title:t.slice(0,120), priority:PR[e.priority]!=null?e.priority:'Medium', due:/^\d{4}-\d{2}-\d{2}$/.test(e.due||'')?e.due:'', date}); }
     else if(e.type === 'task_done'){ const t = String(e.title||'').trim(); if(t) out.push({type:'task_done', title:t.slice(0,120)}); }
+    else if(e.type === 'study'){ const m = mins(e.minutes); if(m) out.push({type:'study', kind:e.kind === 'Reading' ? 'Reading' : 'Study', subject:String(e.subject||'').slice(0,80), minutes:m, date}); }
+    else if(e.type === 'exercise'){ const m = mins(e.minutes); if(m) out.push({type:'exercise', activity:String(e.activity||'Exercise').slice(0,40), minutes:m, date}); }
+    else if(e.type === 'screen'){ const m = mins(e.minutes); if(m) out.push({type:'screen', minutes:m, note:String(e.note||'').slice(0,60), date}); }
   }
   return out;
 }
@@ -242,6 +348,8 @@ const KW = {
   Health:/medicine|pharmacy|doctor|hospital|gym|medical/,
   Entertainment:/movie|netflix|game|concert|party|outing/
 };
+const EX_RE = /\b(walk|walked|walking|run|ran|running|jog|jogged|jogging|gym|workout|exercise|exercised|yoga|cycling|cycled|swim|swam|swimming|stretching|pushups|football|badminton|cricket|training|sport|sports)\b/;
+const ST_RE = /\b(study|studied|studying|read|reading|book|revision|revised|homework|course|learn|learned|learning|practice|practiced|coding|class)\b/;
 function localParse(text){
   const entries = [], skipped = [];
   let date = today();
@@ -250,6 +358,16 @@ function localParse(text){
     c = c.trim(); if(!c) continue;
     const low = c.toLowerCase(); let m;
     if((m = low.match(/^(?:done|finished|completed|did)\s+(.+)/))){ entries.push({type:'task_done', title:m[1]}); continue; }
+    const dm = durIn(low);
+    if(dm){
+      if(/\b(screen time|screen|phone|mobile|instagram|youtube|social media)\b/.test(low)){ entries.push({type:'screen', minutes:dm, note:'', date}); continue; }
+      if((m = low.match(EX_RE))){ entries.push({type:'exercise', activity:m[1], minutes:dm, date}); continue; }
+      if(ST_RE.test(low)){
+        const kind = /\b(read|reading|book)\b/.test(low) ? 'Reading' : 'Study';
+        const subject = c.replace(/(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)(?![a-z])/ig,'').replace(/\b(studied|study|studying|read|reading|for|about|on|of)\b/ig,'').replace(/\s+/g,' ').trim();
+        entries.push({type:'study', kind, subject, minutes:dm, date}); continue;
+      }
+    }
     if(/^(?:need to|needs to|have to|must|todo|to do|task|remind me to|remember to|call|buy|pay|book|renew|submit|send|clean|plan|update|read|visit)\b/.test(low) && !/^(paid|spent|bought)/.test(low)){
       let title = c.replace(/^(?:task\s*:?|todo\s*:?|to do\s*:?|need to|needs to|have to|must|remind me to|remember to)\s*/i, '').replace(/\b(urgent|asap|high priority|low priority)\b/ig,'').trim();
       title = title.charAt(0).toUpperCase()+title.slice(1);
@@ -303,10 +421,13 @@ async function aiParse(text){
    + '{"type":"leave","time":"HH:MM","date":"YYYY-MM-DD"} (left office); '
    + '{"type":"expense","amount":number,"category":"one of '+CATS.join(', ')+'","note":"short","date":"YYYY-MM-DD"}; '
    + '{"type":"task","title":"short","priority":"High|Medium|Low","due":"YYYY-MM-DD or empty"}; '
-   + '{"type":"task_done","title":"words from the task that was finished"}. '
-   + 'Use 24-hour times; convert 6:45 pm to 18:45; if a time is given without am/pm, assume office hours (arrive in the morning, leave in the evening). '
+   + '{"type":"task_done","title":"words from the task that was finished"}; '
+   + '{"type":"study","kind":"Study|Reading","subject":"short topic or book","minutes":number,"date":"YYYY-MM-DD"} (studying, homework, courses = Study; books, articles = Reading); '
+   + '{"type":"exercise","activity":"walk, gym, yoga, run...","minutes":number,"date":"YYYY-MM-DD"}; '
+   + '{"type":"screen","minutes":number,"note":"most-used app or empty","date":"YYYY-MM-DD"} (the total phone screen time for that day, not a single session). '
+   + 'Convert all durations to whole minutes (1h 30m = 90). Use 24-hour times; convert 6:45 pm to 18:45; if a time is given without am/pm, assume office hours (arrive in the morning, leave in the evening). '
    + 'Use "now" = the current time. Dates default to today; resolve words like yesterday or tomorrow. Amounts are plain numbers without currency. Ignore anything that is not one of these.';
-  const out = await claude(sys, text, 800);
+  const out = await claude(sys, text, 900);
   const m = out.match(/\{[\s\S]*\}/); if(!m) throw new Error('No JSON in reply');
   return normalize(JSON.parse(m[0]).entries);
 }
@@ -316,7 +437,7 @@ async function aiParse(text){
 
 /* ===================== UI ===================== */
 const $ = s => document.querySelector(s);
-let tab = 'home', pending = [], charts = {}, RANGE = 14, hDate = today();
+let tab = 'home', pending = [], charts = {}, RANGE = 14, hDate = today(), hab = 'study';
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600); }
 
 function desc(e){
@@ -328,20 +449,23 @@ function desc(e){
     case 'expense': return '💸 '+money(e.amount)+' · '+esc(e.category)+(e.note ? ' · '+esc(e.note) : '')+dt;
     case 'task': return '✅ Task: '+esc(e.title)+' <span class="badge '+e.priority+'">'+e.priority+'</span>'+dt;
     case 'task_done': return '☑️ Finished: '+esc(e.title);
+    case 'study': return (e.kind === 'Reading' ? '📖 Reading ' : '📚 Study ')+fmtDur(e.minutes)+(e.subject ? ' · '+esc(e.subject) : '')+dt;
+    case 'exercise': return '🏃 '+esc(e.activity||'Exercise')+' '+fmtDur(e.minutes)+dt;
+    case 'screen': return '📱 Phone '+fmtDur(e.minutes)+(e.note ? ' · '+esc(e.note) : '')+dt;
   }
   return '';
 }
 
 function renderMode(){
-  $('#mode').textContent = S.settings.apiKey ? 'AI is on: write naturally, in any wording.' : 'AI is off (no API key in Settings): using a simple offline parser. Try short phrases like "lunch 180, 3 glasses water".';
+  $('#mode').textContent = S.settings.apiKey ? 'AI is on: write naturally, in any wording.' : 'AI is off (no API key in Settings): using a simple offline parser. Try short phrases like "lunch 180, 3 glasses water, studied 1h, walked 30 min".';
   $('#go').textContent = S.settings.apiKey ? 'Add with AI' : 'Add';
 }
-function renderPreview(res, raw){
+function renderPreview(res){
   const box = $('#preview');
   if(!res){ box.innerHTML = ''; return; }
   let h = '<div style="margin-top:10px"><b class="small">Check before saving</b>';
   if(res.entries.length){
-    res.entries.forEach((e,i) => { h += '<div class="item"><div class="t">'+desc(e)+'</div><button class="x" data-del="'+i+'">✕</button></div>'; });
+    res.entries.forEach((e,i) => { h += '<div class="item"><div class="t">'+desc(e)+(e.type === 'screen' ? ' <span class="muted small">(replaces that day\'s total)</span>' : '')+'</div><button class="x" data-del="'+i+'">✕</button></div>'; });
     h += '<div class="row"><button id="pCancel">Cancel</button><button id="pSave" class="primary">Save '+res.entries.length+'</button></div>';
   }else{
     h += '<p class="muted small">I could not find anything to log in that text.</p><div class="row"><button id="pCancel">OK</button></div>';
@@ -359,39 +483,66 @@ function findTask(title){
   return best;
 }
 function commit(list){
-  let n = 0, done = 0;
+  let n = 0;
   for(const e of list){
     if(e.type === 'task_done'){
       const t = findTask(e.title);
-      if(t){ t.status = 'done'; t.doneDate = today(); done++; }
+      if(t){ t.status = 'done'; t.doneDate = today(); }
       else S.entries.push({id:uid(), type:'task', date:today(), title:e.title, priority:'Medium', due:'', status:'done', doneDate:today()});
       n++; continue;
     }
+    if(e.type === 'screen') S.entries = S.entries.filter(x => !(x.type === 'screen' && x.date === e.date));
     const x = {id:uid(), ...e}; if(x.type === 'task'){ x.status = 'todo'; x.due = x.due || ''; }
     S.entries.push(x); n++;
   }
   save(); renderAll(); toast('Saved '+n+' item'+(n === 1 ? '' : 's'));
 }
 function quickAdd(k){
-  if(k === 'w1' || k === 'w2'){ const g = k === 'w1' ? 1 : 2; commit([{type:'water', glasses:g, date:today()}]); }
-  if(k === 'in') commit([{type:'arrive', time:nowHM(), date:today()}]);
-  if(k === 'out') commit([{type:'leave', time:nowHM(), date:today()}]);
+  const date = today();
+  if(k === 'w1' || k === 'w2') commit([{type:'water', glasses:k === 'w1' ? 1 : 2, date}]);
+  if(k === 'in') commit([{type:'arrive', time:nowHM(), date}]);
+  if(k === 'out') commit([{type:'leave', time:nowHM(), date}]);
+  if(k === 'st') commit([{type:'study', kind:'Study', subject:'', minutes:30, date}]);
+  if(k === 'rd') commit([{type:'study', kind:'Reading', subject:'', minutes:30, date}]);
+  if(k === 'ex') commit([{type:'exercise', activity:'Workout', minutes:30, date}]);
+  if(k === 'ph'){
+    const v = prompt('Phone screen time today (e.g. 2h 30m, 2.5h, or 150 for minutes)'); if(v == null) return;
+    const m = parseDur(v); if(!m || m > 1440){ toast('Could not read that'); return; }
+    commit([{type:'screen', minutes:m, note:'', date}]);
+  }
 }
 
+const bar = (pct, over) => '<div class="bar '+(over ? 'over' : '')+'"><i style="width:'+Math.min(100, Math.max(0, pct))+'%"></i></div>';
 function dayCards(d){
   const s = S.settings;
-  const water = d.water || 0, wp = Math.min(100, water/s.waterGoal*100);
-  const over = d.spent > s.budget, sp = s.budget > 0 ? Math.min(100, d.spent/s.budget*100) : 0;
+  const water = d.water || 0;
+  const over = d.spent > s.budget, sp = s.budget > 0 ? d.spent/s.budget*100 : 0;
   const late = d.arrive != null && d.arrive > toMin(s.officeStart);
-  return '<div class="kpi"><div class="l">💧 Water</div><div class="v">'+fmtN(water)+' <span class="s">/ '+s.waterGoal+'</span></div><div class="bar"><i style="width:'+wp+'%"></i></div></div>'+
-    '<div class="kpi"><div class="l">💸 Spent</div><div class="v">'+money(d.spent)+'</div><div class="s">budget '+money(s.budget)+'</div><div class="bar '+(over?'over':'')+'"><i style="width:'+sp+'%"></i></div></div>'+
+  const learn = d.learn || 0, ex = d.exercise || 0, lim = s.phoneLimit*60;
+  return '<div class="kpi"><div class="l">💧 Water</div><div class="v">'+fmtN(water)+' <span class="s">/ '+s.waterGoal+'</span></div>'+bar(water/s.waterGoal*100)+'</div>'+
+    '<div class="kpi"><div class="l">💸 Spent</div><div class="v">'+money(d.spent)+'</div><div class="s">budget '+money(s.budget)+'</div>'+bar(sp, over)+'</div>'+
     '<div class="kpi"><div class="l">🏢 Arrived</div><div class="v '+(late?'late':'')+'">'+(d.arrive != null ? hm(d.arrive) : '--:--')+'</div><div class="s">'+(late ? 'late vs '+s.officeStart : 'start '+s.officeStart)+'</div></div>'+
-    '<div class="kpi"><div class="l">🚪 Left</div><div class="v">'+(d.leave != null ? hm(d.leave) : '--:--')+'</div><div class="s">'+(d.hours != null ? fmtN(d.hours)+' h at office' : 'not left yet')+'</div></div>';
+    '<div class="kpi"><div class="l">🚪 Left</div><div class="v">'+(d.leave != null ? hm(d.leave) : '--:--')+'</div><div class="s">'+(d.hours != null ? fmtN(d.hours)+' h at office' : 'not left yet')+'</div></div>'+
+    '<div class="kpi"><div class="l">📚 Study + reading</div><div class="v">'+fmtDur(learn)+'</div><div class="s">goal '+fmtDur(s.studyGoal)+'</div>'+bar(learn/s.studyGoal*100)+'</div>'+
+    '<div class="kpi"><div class="l">🏃 Exercise</div><div class="v">'+fmtDur(ex)+'</div><div class="s">goal '+fmtDur(s.exerciseGoal)+'</div>'+bar(ex/s.exerciseGoal*100)+'</div>'+
+    '<div class="kpi wide"><div class="l">📱 Phone screen time</div><div class="v '+(d.screen != null && d.screen > lim ? 'late' : '')+'">'+(d.screen != null ? fmtDur(d.screen) : '–')+'</div><div class="s">limit '+fmtDur(lim)+(d.screen != null && d.screen > lim ? ' · over by '+fmtDur(d.screen-lim) : '')+'</div>'+bar(d.screen != null ? d.screen/lim*100 : 0, d.screen != null && d.screen > lim)+'</div>';
 }
 function renderToday(){
   $('#todayCards').innerHTML = dayCards(dayData(today()));
   const es = S.entries.filter(e => e.date === today() && e.type !== 'task').slice().reverse();
   $('#todayList').innerHTML = es.length ? es.map(e => '<div class="item"><div class="t">'+desc(e)+'</div><button class="x" data-rm="'+e.id+'">✕</button></div>').join('') : '<span class="muted small">Nothing logged yet today.</span>';
+}
+
+function renderHistory(){
+  const d = dayData(hDate);
+  $('#hDate').value = hDate; $('#hDate').max = today();
+  $('#hCards').innerHTML = dayCards(d);
+  const es = S.entries.filter(e => e.date === hDate).slice().reverse();
+  $('#hList').innerHTML = es.length ? es.map(e => '<div class="item"><div class="t">'+desc(e)+'</div><button class="x" data-rm="'+e.id+'">✕</button></div>').join('') : '<span class="muted small">Nothing logged on this day.</span>';
+  const rows = lastDays(30).reverse().map(dayData);
+  const c = v => v != null ? v : '–';
+  $('#hTable').innerHTML = '<table class="t"><tr><th>Date</th><th>💧</th><th>In</th><th>Out</th><th>Hrs</th><th>Spent</th><th>📚</th><th>🏃</th><th>📱</th></tr>'+
+    rows.map(r => '<tr data-d="'+r.date+'" style="border-top:1px solid var(--line);'+(r.date === hDate ? 'background:var(--soft);' : '')+'"><td>'+shortDate(r.date)+'</td><td>'+(r.water != null ? fmtN(r.water) : '–')+'</td><td>'+(r.arrive != null ? hm(r.arrive) : '–')+'</td><td>'+(r.leave != null ? hm(r.leave) : '–')+'</td><td>'+(r.hours != null ? fmtN(r.hours) : '–')+'</td><td>'+(r.spent ? money(r.spent) : '–')+'</td><td>'+(r.learn != null ? fmtDur(r.learn) : '–')+'</td><td>'+(r.exercise != null ? fmtDur(r.exercise) : '–')+'</td><td>'+(r.screen != null ? fmtDur(r.screen) : '–')+'</td></tr>').join('')+'</table>';
 }
 
 function renderTasks(){
@@ -403,29 +554,61 @@ function renderTasks(){
   $('#tDone').innerHTML = done.length ? done.map(row).join('') : '<span class="muted small">Nothing finished yet.</span>';
 }
 
-function renderHistory(){
-  const d = dayData(hDate);
-  $('#hDate').value = hDate; $('#hDate').max = today();
-  $('#hCards').innerHTML = dayCards(d);
-  const es = S.entries.filter(e => e.date === hDate).slice().reverse();
-  $('#hList').innerHTML = es.length ? es.map(e => '<div class="item"><div class="t">'+desc(e)+'</div><button class="x" data-rm="'+e.id+'">✕</button></div>').join('') : '<span class="muted small">Nothing logged on this day.</span>';
-  const rows = lastDays(30).reverse().map(dayData);
-  $('#hTable').innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="muted small" style="text-align:left"><th>Date</th><th>💧</th><th>In</th><th>Out</th><th>Hrs</th><th>Spent</th></tr>'+
-    rows.map(r => '<tr data-d="'+r.date+'" style="border-top:1px solid var(--line);'+(r.date === hDate ? 'background:var(--soft);' : '')+'"><td style="padding:8px 4px">'+shortDate(r.date)+'</td><td>'+(r.water != null ? fmtN(r.water) : '–')+'</td><td>'+(r.arrive != null ? hm(r.arrive) : '–')+'</td><td>'+(r.leave != null ? hm(r.leave) : '–')+'</td><td>'+(r.hours != null ? fmtN(r.hours) : '–')+'</td><td>'+(r.spent ? money(r.spent) : '–')+'</td></tr>').join('')+'</table>';
+/* ---- chart helpers ---- */
+const theme = () => { const cs = getComputedStyle(document.documentElement); return {tx:cs.getPropertyValue('--muted').trim(), gr:cs.getPropertyValue('--line').trim()}; };
+function baseOpt(){
+  const {tx, gr} = theme();
+  return {responsive:true, maintainAspectRatio:false, animation:false,
+    plugins:{legend:{labels:{color:tx, boxWidth:10, font:{size:11}}}},
+    scales:{x:{ticks:{color:tx, maxRotation:0, autoSkip:true, font:{size:10}}, grid:{display:false}}, y:{beginAtZero:true, ticks:{color:tx, font:{size:10}}, grid:{color:gr}}}};
+}
+function mkChart(id, cfg){
+  if(typeof Chart === 'undefined') return;
+  const el = document.getElementById(id); if(!el) return;
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(el, cfg);
+}
+const goalLine = (label, vals, color) => ({type:'line', label, data:vals, borderColor:color, borderDash:[5,4], pointRadius:0, borderWidth:2});
+function studyCfg(dates){
+  const days = dates.map(dayData), o = baseOpt(); o.scales.x.stacked = true; o.scales.y.stacked = true;
+  return {data:{labels:dates.map(shortDate), datasets:[
+    {type:'bar', label:'Study (min)', data:days.map(d => d.studyM), backgroundColor:'#2E75B6', borderRadius:3, stack:'a'},
+    {type:'bar', label:'Reading (min)', data:days.map(d => d.readM), backgroundColor:'#7B4EA3', borderRadius:3, stack:'a'},
+    goalLine('Goal', days.map(() => S.settings.studyGoal), '#ED7D31')]}, options:o};
+}
+function exerciseCfg(dates){
+  const days = dates.map(dayData);
+  return {data:{labels:dates.map(shortDate), datasets:[
+    {type:'bar', label:'Exercise (min)', data:days.map(d => d.exercise), backgroundColor:'#1B998B', borderRadius:3},
+    goalLine('Goal', days.map(() => S.settings.exerciseGoal), '#ED7D31')]}, options:baseOpt()};
+}
+function phoneCfg(dates){
+  const days = dates.map(dayData), lim = S.settings.phoneLimit, o = baseOpt();
+  const vals = days.map(d => d.screen != null ? +(d.screen/60).toFixed(2) : null);
+  o.plugins.tooltip = {callbacks:{label:c => c.dataset.label+': '+fmtDur(c.parsed.y*60)}};
+  return {data:{labels:dates.map(shortDate), datasets:[
+    {type:'bar', label:'Screen time (h)', data:vals, backgroundColor:vals.map(v => v != null && v > lim ? '#C0504D' : '#5B8DEF'), borderRadius:3},
+    goalLine('Limit', days.map(() => lim), '#404040')]}, options:o};
 }
 
 function insightsLocal(days){
-  const s = S.settings, out = [];
+  const s = S.settings, out = [], n = days.length;
   const w = days.map(d => d.water).filter(x => x != null);
   if(w.length) out.push('💧 Water: goal met on '+w.filter(x => x >= s.waterGoal).length+' of '+w.length+' logged days; average '+fmtN(avg(w))+' glasses (goal '+s.waterGoal+').');
   const ar = days.map(d => d.arrive).filter(x => x != null);
   if(ar.length) out.push('🏢 Office: average arrival '+hm(avg(ar))+', later than '+s.officeStart+' on '+ar.filter(x => x > toMin(s.officeStart)).length+' of '+ar.length+' days'+(avg(days.map(d => d.hours)) != null ? '; about '+fmtN(avg(days.map(d => d.hours)))+' h per day.' : '.'));
-  const tot = days.reduce((a,d) => a+d.spent, 0);
+  const tot = sum(days.map(d => d.spent));
   if(tot > 0){
     const bc = {}; S.entries.filter(e => e.type === 'expense' && days.some(d => d.date === e.date)).forEach(e => bc[e.category] = (bc[e.category]||0)+e.amount);
     const top = Object.entries(bc).sort((a,b) => b[1]-a[1])[0];
-    out.push('💸 Money: '+money(tot)+' in '+days.length+' days (avg '+money(tot/days.length)+'/day); biggest category '+top[0]+' ('+money(top[1])+'); over budget on '+days.filter(d => d.spent > s.budget).length+' days.');
+    out.push('💸 Money: '+money(tot)+' in '+n+' days (avg '+money(tot/n)+'/day); biggest category '+top[0]+' ('+money(top[1])+'); over budget on '+days.filter(d => d.spent > s.budget).length+' days.');
   }
+  const ln = days.map(d => d.learn).filter(x => x != null);
+  if(ln.length) out.push('📚 Study/reading: average '+fmtDur(avg(ln))+' on logged days (goal '+fmtDur(s.studyGoal)+'); goal met on '+ln.filter(x => x >= s.studyGoal).length+' of '+ln.length+' days.');
+  const xs = days.map(d => d.exercise).filter(x => x != null);
+  if(xs.length) out.push('🏃 Exercise: active on '+xs.length+' of '+n+' days, '+fmtDur(sum(xs))+' in total; goal ('+fmtDur(s.exerciseGoal)+') met on '+xs.filter(x => x >= s.exerciseGoal).length+' days.');
+  const sc = days.map(d => d.screen).filter(x => x != null);
+  if(sc.length) out.push('📱 Phone: average '+fmtDur(avg(sc))+' per day (limit '+fmtDur(s.phoneLimit*60)+'); over the limit on '+sc.filter(x => x > s.phoneLimit*60).length+' of '+sc.length+' logged days.');
   const open = tasks().filter(t => t.status !== 'done');
   out.push('✅ Tasks: '+open.length+' open, '+open.filter(t => t.priority === 'High').length+' high priority, '+open.filter(t => t.due && t.due < today()).length+' overdue.');
   return out;
@@ -436,45 +619,82 @@ function renderDash(){
   const dates = lastDays(RANGE), days = dates.map(dayData), s = S.settings;
   const w = days.map(d => d.water), ar = days.map(d => d.arrive), hr = days.map(d => d.hours);
   const wl = w.filter(x => x != null), arl = ar.filter(x => x != null);
-  const tot = days.reduce((a,d) => a+d.spent, 0), open = tasks().filter(t => t.status !== 'done');
+  const ln = days.map(d => d.learn).filter(x => x != null), xs = days.map(d => d.exercise).filter(x => x != null), sc = days.map(d => d.screen).filter(x => x != null);
+  const tot = sum(days.map(d => d.spent));
   $('#kpis').innerHTML =
     kpi('Avg water / day', wl.length ? fmtN(avg(w)) : '–', 'goal '+s.waterGoal+' glasses') +
     kpi('Water goal met', wl.length ? wl.filter(x => x >= s.waterGoal).length : '–', 'of '+wl.length+' logged days') +
     kpi('Avg arrival', arl.length ? hm(avg(ar)) : '–', 'start '+s.officeStart) +
     kpi('Late days', arl.length ? arl.filter(x => x > toMin(s.officeStart)).length : '–', 'of '+arl.length+' logged days') +
     kpi('Avg hours at office', avg(hr) != null ? fmtN(avg(hr)) : '–', 'per day') +
-    kpi('Spent ('+RANGE+' days)', money(tot), 'avg '+money(tot/RANGE)+' / day') ;
+    kpi('Spent ('+RANGE+' days)', money(tot), 'avg '+money(tot/RANGE)+' / day') +
+    kpi('Avg study + reading', ln.length ? fmtDur(avg(ln)) : '–', 'goal '+fmtDur(s.studyGoal)+' · '+ln.length+' days logged') +
+    kpi('Exercise goal met', xs.length ? xs.filter(x => x >= s.exerciseGoal).length : '–', 'of '+xs.length+' active days') +
+    kpi('Avg phone / day', sc.length ? fmtDur(avg(sc)) : '–', 'limit '+fmtDur(s.phoneLimit*60)) +
+    kpi('Days over phone limit', sc.length ? sc.filter(x => x > s.phoneLimit*60).length : '–', 'of '+sc.length+' logged days');
   $('#insights').innerHTML = insightsLocal(days).map(x => '<div style="margin:4px 0">'+esc(x)+'</div>').join('');
   if(typeof Chart === 'undefined'){ $('#charts').innerHTML = '<div class="card muted small">Charts need an internet connection the first time the page loads (Chart.js). Reload when online.</div>'; return; }
-  const cs = getComputedStyle(document.documentElement), tx = cs.getPropertyValue('--muted').trim(), gr = cs.getPropertyValue('--line').trim();
-  const labels = dates.map(shortDate);
-  const base = (extra) => {
-    const o = {responsive:true, maintainAspectRatio:false, animation:false,
-      plugins:{legend:{labels:{color:tx, boxWidth:10, font:{size:11}}}},
-      scales:{x:{ticks:{color:tx, maxRotation:0, autoSkip:true, font:{size:10}}, grid:{display:false}}, y:{beginAtZero:true, ticks:{color:tx, font:{size:10}}, grid:{color:gr}}}};
-    return Object.assign(o, extra||{});
-  };
-  const mk = (id, cfg) => { if(charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); };
-  const flat = v => days.map(() => v);
-  mk('c-water', {data:{labels, datasets:[
-    {type:'bar', label:'Glasses', data:w, backgroundColor:'#2E75B6', borderRadius:3},
-    {type:'line', label:'Goal', data:flat(s.waterGoal), borderColor:'#ED7D31', borderDash:[5,4], pointRadius:0, borderWidth:2}]}, options:base()});
-  const timeOpt = base(); timeOpt.scales.y = {beginAtZero:false, ticks:{color:tx, font:{size:10}, stepSize:60, callback:v => hm(v)}, grid:{color:gr}};
+  const {tx, gr} = theme(), labels = dates.map(shortDate), flat = v => days.map(() => v);
+  mkChart('c-water', {data:{labels, datasets:[
+    {type:'bar', label:'Glasses', data:w, backgroundColor:'#2E75B6', borderRadius:3}, goalLine('Goal', flat(s.waterGoal), '#ED7D31')]}, options:baseOpt()});
+  const timeOpt = baseOpt(); timeOpt.scales.y = {beginAtZero:false, ticks:{color:tx, font:{size:10}, stepSize:60, callback:v => hm(v)}, grid:{color:gr}};
   timeOpt.plugins.tooltip = {callbacks:{label:c => c.dataset.label+': '+hm(c.parsed.y)}};
-  mk('c-time', {type:'line', data:{labels, datasets:[
+  mkChart('c-time', {type:'line', data:{labels, datasets:[
     {label:'Arrival', data:ar, borderColor:'#2E9E5B', backgroundColor:'#2E9E5B', spanGaps:true, tension:.25, pointRadius:3},
     {label:'Leaving', data:days.map(d => d.leave), borderColor:'#7B4EA3', backgroundColor:'#7B4EA3', spanGaps:true, tension:.25, pointRadius:3},
     {label:'Office start', data:flat(toMin(s.officeStart)), borderColor:'#8C8C8C', borderDash:[5,4], pointRadius:0, borderWidth:1.5}]}, options:timeOpt});
-  mk('c-hours', {type:'bar', data:{labels, datasets:[{label:'Hours', data:hr.map(x => x != null ? +x.toFixed(2) : null), backgroundColor:'#1B998B', borderRadius:3}]}, options:base({plugins:{legend:{display:false}}})});
-  mk('c-spend', {data:{labels, datasets:[
-    {type:'bar', label:'Spent', data:days.map(d => d.spent), backgroundColor:'#C0504D', borderRadius:3},
-    {type:'line', label:'Budget', data:flat(s.budget), borderColor:'#7a7a7a', borderDash:[5,4], pointRadius:0, borderWidth:2}]}, options:base()});
+  const hOpt = baseOpt(); hOpt.plugins.legend = {display:false};
+  mkChart('c-hours', {type:'bar', data:{labels, datasets:[{label:'Hours', data:hr.map(x => x != null ? +x.toFixed(2) : null), backgroundColor:'#1B998B', borderRadius:3}]}, options:hOpt});
+  mkChart('c-study', studyCfg(dates));
+  mkChart('c-ex', exerciseCfg(dates));
+  mkChart('c-phone', phoneCfg(dates));
+  mkChart('c-spend', {data:{labels, datasets:[
+    {type:'bar', label:'Spent', data:days.map(d => d.spent), backgroundColor:'#C0504D', borderRadius:3}, goalLine('Budget', flat(s.budget), '#7a7a7a')]}, options:baseOpt()});
   const bc = {}; S.entries.filter(e => e.type === 'expense' && dates.includes(e.date)).forEach(e => bc[e.category] = (bc[e.category]||0)+e.amount);
   const ck = Object.keys(bc);
   const pie = {responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{position:'right', labels:{color:tx, boxWidth:10, font:{size:11}}}}};
-  mk('c-cat', {type:'doughnut', data:{labels:ck.length ? ck : ['No data'], datasets:[{data:ck.length ? ck.map(k => bc[k]) : [1], backgroundColor:ck.length ? ['#2E75B6','#ED7D31','#2E9E5B','#7B4EA3','#C0504D','#1B998B','#E0B01E','#8C8C8C'] : [gr], borderWidth:0}]}, options:pie});
+  mkChart('c-cat', {type:'doughnut', data:{labels:ck.length ? ck : ['No data'], datasets:[{data:ck.length ? ck.map(k => bc[k]) : [1], backgroundColor:ck.length ? ['#2E75B6','#ED7D31','#2E9E5B','#7B4EA3','#C0504D','#1B998B','#E0B01E','#8C8C8C'] : [gr], borderWidth:0}]}, options:pie});
   const tk = tasks(), td = tk.filter(t => t.status === 'done').length, to = tk.length-td;
-  mk('c-task', {type:'doughnut', data:{labels:tk.length ? ['Open','Done'] : ['No data'], datasets:[{data:tk.length ? [to,td] : [1], backgroundColor:tk.length ? ['#ED7D31','#2E9E5B'] : [gr], borderWidth:0}]}, options:pie});
+  mkChart('c-task', {type:'doughnut', data:{labels:tk.length ? ['Open','Done'] : ['No data'], datasets:[{data:tk.length ? [to,td] : [1], backgroundColor:tk.length ? ['#ED7D31','#2E9E5B'] : [gr], borderWidth:0}]}, options:pie});
+}
+
+/* ---- Habits tab ---- */
+function recentList(types){
+  const es = S.entries.filter(e => types.includes(e.type)).slice().reverse().sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,15);
+  return es.length ? es.map(e => '<div class="item"><div class="t">'+desc(e)+' <span class="muted small">'+shortDate(e.date)+'</span></div><button class="x" data-rm="'+e.id+'">✕</button></div>').join('') : '<span class="muted small">Nothing logged yet.</span>';
+}
+function renderHabits(){
+  document.querySelectorAll('#hseg button').forEach(b => b.classList.toggle('on', b.dataset.h === hab));
+  ['study','ex','phone'].forEach(k => { $('#hb-'+k).hidden = k !== hab; });
+  ['#fsDate','#feDate','#fpDate'].forEach(id => { const el = $(id); if(!el.value) el.value = today(); el.max = today(); });
+  const dates = lastDays(14), days = dates.map(dayData), w7 = days.slice(-7), s = S.settings;
+  if(hab === 'study'){
+    const goalOk = d => d.learn != null && d.learn >= s.studyGoal;
+    $('#hsKpi').innerHTML =
+      kpi('This week', fmtDur(sum(w7.map(d => d.learn))), 'Study '+fmtDur(sum(w7.map(d => d.studyM)))+' · Reading '+fmtDur(sum(w7.map(d => d.readM)))) +
+      kpi('Daily average', fmtDur(sum(w7.map(d => d.learn))/7), 'goal '+fmtDur(s.studyGoal)) +
+      kpi('Goal met', w7.filter(goalOk).length, 'of the last 7 days') +
+      kpi('Streak', streak(goalOk), 'days in a row at goal');
+    mkChart('h-study', studyCfg(dates)); $('#hsList').innerHTML = recentList(['study']);
+  }
+  if(hab === 'ex'){
+    const goalOk = d => d.exercise != null && d.exercise >= s.exerciseGoal;
+    $('#heKpi').innerHTML =
+      kpi('This week', fmtDur(sum(w7.map(d => d.exercise))), 'total exercise time') +
+      kpi('Active days', w7.filter(d => d.exercise != null).length, 'of the last 7 days') +
+      kpi('Goal met', w7.filter(goalOk).length, 'goal '+fmtDur(s.exerciseGoal)+' a day') +
+      kpi('Streak', streak(goalOk), 'days in a row at goal');
+    mkChart('h-ex', exerciseCfg(dates)); $('#heList').innerHTML = recentList(['exercise']);
+  }
+  if(hab === 'phone'){
+    const sc = w7.map(d => d.screen).filter(x => x != null), lim = s.phoneLimit*60, t = dayData(today());
+    $('#hpKpi').innerHTML =
+      kpi('Today', t.screen != null ? fmtDur(t.screen) : '–', 'limit '+fmtDur(lim)) +
+      kpi('Average (7 days)', sc.length ? fmtDur(avg(sc)) : '–', sc.length+' days logged') +
+      kpi('Days over limit', sc.filter(x => x > lim).length, 'of '+sc.length+' logged days') +
+      kpi('Lowest day', sc.length ? fmtDur(Math.min(...sc)) : '–', 'last 7 days');
+    mkChart('h-phone', phoneCfg(dates)); $('#hpList').innerHTML = recentList(['screen']);
+  }
 }
 
 async function runCoach(){
@@ -484,15 +704,15 @@ async function runCoach(){
   try{
     const dates = lastDays(14), days = dates.map(dayData);
     const bc = {}; S.entries.filter(e => e.type === 'expense' && dates.includes(e.date)).forEach(e => bc[e.category] = (bc[e.category]||0)+e.amount);
-    const open = tasks().filter(t => t.status !== 'done');
+    const open = tasks().filter(t => t.status !== 'done'), st = S.settings;
     const payload = {
-      goals:{waterGlassesPerDay:S.settings.waterGoal, officeStart:S.settings.officeStart, dailyBudget:S.settings.budget, currency:S.settings.cur},
-      days:days.map(d => ({date:d.date, waterGlasses:d.water, arrived:d.arrive != null ? hm(d.arrive) : null, left:d.leave != null ? hm(d.leave) : null, hoursAtOffice:d.hours != null ? +d.hours.toFixed(1) : null, spent:d.spent})),
+      goals:{waterGlassesPerDay:st.waterGoal, officeStart:st.officeStart, dailyBudget:st.budget, currency:st.cur, studyReadingMinutesPerDay:st.studyGoal, exerciseMinutesPerDay:st.exerciseGoal, phoneLimitHoursPerDay:st.phoneLimit},
+      days:days.map(d => ({date:d.date, waterGlasses:d.water, arrived:d.arrive != null ? hm(d.arrive) : null, left:d.leave != null ? hm(d.leave) : null, hoursAtOffice:d.hours != null ? +d.hours.toFixed(1) : null, spent:d.spent, studyMin:d.studyM, readingMin:d.readM, exerciseMin:d.exercise, phoneMin:d.screen})),
       spendByCategory:bc, openTasks:open.map(t => ({title:t.title, priority:t.priority, due:t.due||null}))
     };
-    const sys = 'You are a practical, kind habit coach reviewing 14 days of a person\'s water intake, office arrival and leaving times, spending and personal tasks. Missing values mean not logged, not zero. '
-      + 'Reply in plain text with no markdown: first a one-sentence overall read, then exactly 4 short lines each starting with "• " that cite specific numbers and dates from the data (water, punctuality, money, tasks), then one line starting "Tomorrow: " with a single small concrete action. Under 170 words.';
-    out.textContent = await claude(sys, JSON.stringify(payload), 700);
+    const sys = 'You are a practical, kind habit coach reviewing 14 days of a person\'s water intake, office arrival and leaving times, spending, study and reading, exercise, daily phone screen time and personal tasks. Missing values mean not logged, not zero. '
+      + 'Reply in plain text with no markdown: first a one-sentence overall read, then exactly 5 short lines each starting with "• " that cite specific numbers and dates from the data, covering the areas that have data (water, office times, money, study and reading, exercise, phone use, tasks) and noting any link between them such as exercise days and phone time, then one line starting "Tomorrow: " with a single small concrete action. Under 200 words.';
+    out.textContent = await claude(sys, JSON.stringify(payload), 800);
   }catch(e){ out.textContent = 'AI coach failed: '+e.message; }
   b.disabled = false; b.textContent = 'Ask AI coach';
 }
@@ -501,6 +721,7 @@ function renderSettings(){
   const s = S.settings;
   $('#sKey').value = s.apiKey; $('#sModel').value = s.model; $('#sWater').value = s.waterGoal;
   $('#sStart').value = s.officeStart; $('#sBudget').value = s.budget; $('#sCur').value = s.cur;
+  $('#sStudy').value = s.studyGoal; $('#sEx').value = s.exerciseGoal; $('#sPhone').value = s.phoneLimit;
 }
 
 function show(t){
@@ -513,6 +734,7 @@ function renderAll(){
   $('#dateLine').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'});
   if(tab === 'home'){ renderMode(); renderToday(); }
   if(tab === 'dash') renderDash();
+  if(tab === 'habits') renderHabits();
   if(tab === 'hist') renderHistory();
   if(tab === 'tasks') renderTasks();
   if(tab === 'set') renderSettings();
@@ -529,6 +751,9 @@ function loadSample(){
       add({type:'arrive', time:pad(rnd(8,10))+':'+pad(rnd(0,59))}); add({type:'leave', time:pad(rnd(17,19))+':'+pad(rnd(0,59))});
       add({type:'expense', amount:rnd(120,260), category:'Food', note:'Lunch'}); add({type:'expense', amount:rnd(60,180), category:'Transport', note:'Commute'});
     }else add({type:'expense', amount:rnd(300,1400), category:['Groceries','Shopping','Entertainment'][rnd(0,2)], note:'Weekend'});
+    if(Math.random() < .75) add({type:'study', kind:Math.random() < .5 ? 'Study' : 'Reading', subject:['Maths','Atomic Habits','Python course','News & articles'][rnd(0,3)], minutes:rnd(20,90)});
+    if(Math.random() < .55) add({type:'exercise', activity:['Walk','Gym','Yoga','Run'][rnd(0,3)], minutes:rnd(15,60)});
+    add({type:'screen', minutes:rnd(110,330), note:['YouTube','Instagram','WhatsApp'][rnd(0,2)]});
   }
   [['Pay credit card bill','High','done'],['Renew car insurance','High','todo'],['Book dentist appointment','Medium','todo'],['Clean up laptop files','Low','todo'],['Buy birthday gift','Medium','done']].forEach(t =>
     S.entries.push({id:uid(), type:'task', sample:true, date:addDays(today(),-5), title:t[0], priority:t[1], due:addDays(today(), rnd(-1,6)), status:t[2], doneDate:t[2] === 'done' ? addDays(today(),-2) : ''}));
@@ -538,7 +763,7 @@ function download(name, text, type){
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
 function toCsv(){
-  const cols = ['type','date','time','glasses','amount','category','note','title','priority','due','status'];
+  const cols = ['type','date','time','glasses','amount','category','note','title','priority','due','status','kind','subject','minutes','activity'];
   const q = v => '"'+String(v ?? '').replace(/"/g,'""')+'"';
   return [cols.join(',')].concat(S.entries.map(e => cols.map(c => q(e[c])).join(','))).join('\n');
 }
@@ -546,6 +771,7 @@ function toCsv(){
 /* ===================== events ===================== */
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
 document.querySelectorAll('.quick button').forEach(b => b.onclick = () => quickAdd(b.dataset.q));
+document.querySelectorAll('#hseg button').forEach(b => b.onclick = () => { hab = b.dataset.h; renderHabits(); });
 
 $('#go').onclick = async () => {
   const t = $('#note').value.trim(); if(!t) return;
@@ -570,13 +796,29 @@ const rmHandler = e => {
   if(id){ S.entries = S.entries.filter(x => x.id !== id); save(); renderAll(); }
   if(tg){ const t = S.entries.find(x => x.id === tg); if(t){ t.status = t.status === 'done' ? 'todo' : 'done'; t.doneDate = t.status === 'done' ? today() : ''; save(); renderAll(); } }
 };
-$('#todayList').onclick = rmHandler; $('#tOpen').onclick = rmHandler; $('#tDone').onclick = rmHandler;
+['#todayList','#tOpen','#tDone','#hList','#hsList','#heList','#hpList'].forEach(id => $(id).onclick = rmHandler);
 $('#tAdd').onclick = () => {
   const title = $('#tTitle').value.trim(); if(!title) return;
   commit([{type:'task', title, priority:$('#tPrio').value, due:$('#tDue').value||'', date:today()}]);
   $('#tTitle').value = ''; $('#tDue').value = '';
 };
 $('#coachBtn').onclick = runCoach;
+
+/* habit forms */
+function needMin(id){ const m = parseDur($(id).value); if(!m || m > 1440){ toast('Enter a time like 45 or 1h 30m'); return null; } return m; }
+$('#fsAdd').onclick = () => { const m = needMin('#fsMin'); if(!m) return;
+  commit([{type:'study', kind:$('#fsKind').value, subject:$('#fsSub').value.trim(), minutes:m, date:$('#fsDate').value || today()}]); $('#fsMin').value = ''; $('#fsSub').value = ''; };
+$('#feAdd').onclick = () => { const m = needMin('#feMin'); if(!m) return;
+  commit([{type:'exercise', activity:$('#feAct').value.trim() || 'Exercise', minutes:m, date:$('#feDate').value || today()}]); $('#feMin').value = ''; $('#feAct').value = ''; };
+$('#fpAdd').onclick = () => { const m = needMin('#fpMin'); if(!m) return;
+  commit([{type:'screen', minutes:m, note:$('#fpNote').value.trim(), date:$('#fpDate').value || today()}]); $('#fpMin').value = ''; $('#fpNote').value = ''; };
+
+/* history */
+$('#hDate').onchange = () => { if($('#hDate').value){ hDate = $('#hDate').value; renderHistory(); } };
+$('#hPrev').onclick = () => { hDate = addDays(hDate, -1); renderHistory(); };
+$('#hNext').onclick = () => { if(hDate < today()){ hDate = addDays(hDate, 1); renderHistory(); } };
+$('#hTable').onclick = e => { const tr = e.target.closest('tr[data-d]'); if(tr){ hDate = tr.dataset.d; renderHistory(); window.scrollTo(0,0); } };
+$('#range').onchange = () => { RANGE = +$('#range').value; renderDash(); };
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 if(SR){
@@ -593,6 +835,7 @@ const bind = (id, key, conv) => $(id).onchange = () => { S.settings[key] = conv(
 bind('#sKey','apiKey', v => v.trim()); bind('#sModel','model', v => v);
 bind('#sWater','waterGoal', v => Math.max(1, +v||8)); bind('#sStart','officeStart', v => v||'09:30');
 bind('#sBudget','budget', v => Math.max(0, +v||0)); bind('#sCur','cur', v => v||'₹');
+bind('#sStudy','studyGoal', v => Math.max(1, +v||60)); bind('#sEx','exerciseGoal', v => Math.max(1, +v||30)); bind('#sPhone','phoneLimit', v => Math.max(0.5, +v||3));
 $('#bJson').onclick = () => { const c = JSON.parse(JSON.stringify(S)); c.settings.apiKey = ''; download('daytracker-backup-'+today()+'.json', JSON.stringify(c, null, 1), 'application/json'); };
 $('#bCsv').onclick = () => download('daytracker-'+today()+'.csv', toCsv(), 'text/csv');
 $('#bImport').onclick = () => $('#fileIn').click();
@@ -608,13 +851,6 @@ $('#fileIn').onchange = async e => {
 $('#bSample').onclick = loadSample;
 $('#bUnsample').onclick = () => { S.entries = S.entries.filter(e => !e.sample); save(); renderAll(); toast('Sample data removed'); };
 $('#bErase').onclick = () => { if(confirm('Erase ALL your logged data on this device? Export a backup first if unsure.')){ S.entries = []; save(); renderAll(); toast('Erased'); } };
-
-$('#hDate').onchange = () => { if($('#hDate').value){ hDate = $('#hDate').value; renderHistory(); } };
-$('#hPrev').onclick = () => { hDate = addDays(hDate, -1); renderHistory(); };
-$('#hNext').onclick = () => { if(hDate < today()){ hDate = addDays(hDate, 1); renderHistory(); } };
-$('#hTable').onclick = e => { const tr = e.target.closest('tr[data-d]'); if(tr){ hDate = tr.dataset.d; renderHistory(); window.scrollTo(0,0); } };
-$('#hList').onclick = rmHandler;
-$('#range').onchange = () => { RANGE = +$('#range').value; renderDash(); };
 
 renderAll();
 </script>
